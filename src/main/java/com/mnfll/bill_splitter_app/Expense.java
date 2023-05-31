@@ -6,18 +6,18 @@ import java.util.List;
 public class Expense {
 	private Date date;
 	private String establishmentName;
-	private String itemName;
-	private double itemCost;
+	private String expenseName;
+	private double expenseCost;
 	private List<String> portionNames;
 	private String payerName;
 	
-	public Expense(Date date, String establishmentName, String itemName, double itemCost, List<String> portionNames,
+	public Expense(Date date, String establishmentName, String expenseName, double itemCost, List<String> portionNames,
 			String payerName) {
 		super();
 		this.date = date;
 		this.establishmentName = establishmentName;
-		this.itemName = itemName;
-		this.itemCost = itemCost;
+		this.expenseName = expenseName;
+		this.expenseCost = itemCost;
 		this.portionNames = portionNames;
 		this.payerName = payerName;
 	}
@@ -34,14 +34,14 @@ public class Expense {
 
 
 
-	public String getItemName() {
-		return itemName;
+	public String getExpenseName() {
+		return expenseName;
 	}
 
 
 
-	public double getItemCost() {
-		return itemCost;
+	public double getExpenseCost() {
+		return expenseCost;
 	}
 
 
@@ -59,14 +59,14 @@ public class Expense {
 	public void displayExpense() {
 		System.out.println("Date: " + getDate());
 		System.out.println("Establishment: " + getEstablishmentName());
-		System.out.println("Item: " + getItemName());
-		System.out.println("Cost: " + getItemCost());
+		System.out.println("Item: " + getExpenseName());
+		System.out.println("Cost: " + getExpenseCost());
 		System.out.println("Portion Names " + getPortionNames());
 		System.out.println("Payer Name: " + getPayerName());
 		System.out.println("---------------------------");
 	}
 	
 	public double calculateCostPerPortion() {		
-		return getItemCost() / getPortionNames().size();
+		return getExpenseCost() / getPortionNames().size();
 	}
 }
