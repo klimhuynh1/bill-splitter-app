@@ -1,5 +1,6 @@
 package com.mnfll.bill_splitter_app;
 
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -9,9 +10,10 @@ import java.util.Scanner;
 
 public class App {
 
-	public static void main(String[] args) throws ParseException {
+	public static void main(String[] args) throws ParseException, Exception {
 		// Create a Scanner object to read user input
 		Scanner scanner = new Scanner(System.in);
+		ExpenseDAO expenseDAO  = new ExpenseDAO();
 		
 		// Create a list to store expenses
 		List<Expense> expenses = new ArrayList<>();
@@ -56,6 +58,7 @@ public class App {
 			Expense expense = new Expense(date, establishmentName, itemName, itemCost, portionNames, payerName);
 			expenses.add(expense);
 			
+			
 			System.out.print("Add more expenses? [Y/n]");
 			String moreItems = scanner.nextLine();
 			if (!(moreItems.isEmpty() || moreItems.equalsIgnoreCase("y"))) {
@@ -67,6 +70,7 @@ public class App {
 		
 		for (Expense expense : expenses) {
 			expense.displayExpense();
+			expenseDAO.saveExpenseDataToDatabase(expense);
 		}
 	}
 

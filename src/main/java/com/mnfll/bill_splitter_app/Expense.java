@@ -26,26 +26,36 @@ public class Expense {
 		return date;
 	}
 
+
+
 	public String getEstablishmentName() {
 		return establishmentName;
 	}
+
+
 
 	public String getItemName() {
 		return itemName;
 	}
 
+
+
+	public double getItemCost() {
+		return itemCost;
+	}
+
+
+
 	public List<String> getPortionNames() {
 		return portionNames;
 	}
+
+
 
 	public String getPayerName() {
 		return payerName;
 	}
 
-	public double getItemCost() {
-		return itemCost;
-	}
-	
 	public void displayExpense() {
 		System.out.println("Date: " + getDate());
 		System.out.println("Establishment: " + getEstablishmentName());
@@ -54,5 +64,9 @@ public class Expense {
 		System.out.println("Portion Names " + getPortionNames());
 		System.out.println("Payer Name: " + getPayerName());
 		System.out.println("---------------------------");
+	}
+	
+	public double calculateCostPerPortion() {		
+		return getItemCost() / getPortionNames().size();
 	}
 }
