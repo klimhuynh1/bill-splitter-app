@@ -45,4 +45,14 @@ public class Expense {
 	public double getItemCost() {
 		return itemCost;
 	}
+	
+	public void displayExpense() {
+		System.out.println("Date: " + getDate());
+		System.out.println("Establishment: " + getEstablishmentName());
+		System.out.println("Item: " + getItemName());
+		System.out.println("Cost: " + getItemCost());
+		System.out.println("Portion Names " + getPortionNames());
+		System.out.println("Payer Name: " + getPayerName());
+		System.out.println("---------------------------");
+	}
 }

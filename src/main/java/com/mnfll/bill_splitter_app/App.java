@@ -15,46 +15,43 @@ public class App {
 		
 		// Create a list to store expenses
 		List<Expense> expenses = new ArrayList<>();
-		
-		// Create a list to store portion names
-		List<String> portionNames = new ArrayList<>();
-		
+
 		boolean addMoreExpenses = true;
 		
 		while (addMoreExpenses) {
-			System.out.print("Enter the date DD-MM-YYYY ");
+			// Create a list to store portion names
+			List<String> portionNames = new ArrayList<>();
+			
+			System.out.print("Enter the date dd/mm/yyyy ");
 			String dateString = scanner.nextLine();
 			Date date = new SimpleDateFormat("dd/MM/yyyy").parse(dateString);
 			
-			
-			System.out.println("Enter the name of the establishment ");
+			System.out.print("Enter the name of the establishment ");
 			String establishmentName = scanner.nextLine();
 			
-			
-			System.out.print("Enter the item name");
+			System.out.print("Enter the item name ");
 			String itemName = scanner.nextLine();
 			
-		
 			System.out.print("Enter the item total cost ");
 			double itemCost = Double.parseDouble(scanner.nextLine());
 			
-			
-			
-			System.out.println("How many people are shared this item?");
+			System.out.print("How many people are shared this item?");
 			int portionNumber = Integer.parseInt(scanner.nextLine());
 			
 			String name;
 			for (int i = 0; i < portionNumber; i++) {
-				System.out.print("Enter portion name" + i + " ");
+				System.out.print("Enter portion name " + (i+1) + " ");
 				name = scanner.nextLine();
 				portionNames.add(name);
 				System.out.println(name + " has been added");
 			}
 			
-			
-			System.out.print("Who paid for the item? ");
-			String payerName = scanner.nextLine();
-			
+			System.out.println("Who paid for the item? ");
+			for (int i = 0; i < portionNames.size(); i++) {
+				System.out.println((i+1) + ". " + portionNames.get(i));
+			}
+			int payerNameIndex = Integer.parseInt(scanner.nextLine());
+			String payerName = portionNames.get(payerNameIndex - 1);
 			
 			Expense expense = new Expense(date, establishmentName, itemName, itemCost, portionNames, payerName);
 			expenses.add(expense);
@@ -66,9 +63,11 @@ public class App {
 			}
 		}
 		
-		
 		scanner.close();
-
+		
+		for (Expense expense : expenses) {
+			expense.displayExpense();
+		}
 	}
 
 }
