@@ -167,9 +167,9 @@ public class ExpenseDAO {
 
 	        PreparedStatement statement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
 	        statement.setDate(1, sqlDate);
-	        statement.setString(2, expense.getExpenseName());
+	        statement.setString(2, expense.getItemName());
 	        statement.setString(3, expense.getEstablishmentName());
-	        statement.setDouble(4, expense.getExpenseCost());
+	        statement.setDouble(4, expense.getItemCost());
 	        statement.setInt(5, expense.getPortionNames().size());
 	        statement.setInt(6, payerId);
 	        statement.setString(7, expense.getPayerName());
