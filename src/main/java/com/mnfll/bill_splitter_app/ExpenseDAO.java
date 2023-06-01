@@ -94,9 +94,32 @@ public class ExpenseDAO {
 	    return generatedKeys;
 	}
 
+	public int getPayerId(String personName) {
+		int personId = -1;
+		try (Connection connection = establishConnection()) {
+	        // Get the payer_id for the 
+	        String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
+	        PreparedStatement statement = connection.prepareStatement(selectQuery);
+	        statement.setString(1, personName);
+	        
+	        ResultSet resultSet = statement.executeQuery();
+	        if (resultSet.next()) {
+	        	personId = resultSet.getInt("person_id");
+	        	System.out.println("Payer ID: " + personId);
+	        }
+	        else {
+	        	System.out.println("Payer Id not found");
+	        }
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return personId;
+	}
 	
 	public int insertExpenseData(Expense expense) {
 	    int generatedExpenseId = -1;
+	    int payerId = getPayerId(expense.getPayerName());
 
 	    try (Connection connection = establishConnection()) {
 	        // Create the table if it doesn't exist
@@ -107,6 +130,7 @@ public class ExpenseDAO {
 	                "establishment_name VARCHAR(255) NOT NULL, " +
 	                "total_cost DECIMAL(10,2) NOT NULL, " +
 	                "split_count INT NOT NULL, " +
+	                "payer_id INT NOT NULL," +
 	                "payer_name VARCHAR(255) NOT NULL" +
 	                ")";
 
@@ -118,11 +142,10 @@ public class ExpenseDAO {
 	        } else {
 	            System.out.println("Failed to create table 'expenses'");
 	        }
-
-
+	        
 	        // Prepare the insert statement
-	        String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, split_count, payer_name) " +
-	                "VALUES (?, ?, ?, ?, ?, ?)";
+	        String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, split_count, payer_id, payer_name) " +
+	                "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
 	        // Convert java.util.Date to java.sql.Date
 	        Date sqlDate = new Date(expense.getDate().getTime());
@@ -133,7 +156,8 @@ public class ExpenseDAO {
 	        statement.setString(3, expense.getEstablishmentName());
 	        statement.setDouble(4, expense.getExpenseCost());
 	        statement.setInt(5, expense.getPortionNames().size());
-	        statement.setString(6, expense.getPayerName());
+	        statement.setInt(6, payerId);
+	        statement.setString(7, expense.getPayerName());
 
 	        int rowsInserted = statement.executeUpdate();
 
@@ -200,5 +224,36 @@ public class ExpenseDAO {
 	    } catch (SQLException e) {
 	        e.printStackTrace();
 	    }
+	}
+	
+	public double CaculateTotalAmountOwed(String fromUser, String toUser) {
+		double totalAmountOwed = 0;
+		try (Connection connection = establishConnection()) {
+			String query = "SELECT SUM(amount_owed) AS total_amount_owed " +
+                    "FROM (SELECT EP.expense_id, EP.person_id, P.person_name, EP.amount_owed, E, payer_id, E.payer_name " +
+                    "FROM expensePersons EP " +
+                    "INNER JOIN people P ON EP.person_id = P.person_id " +
+                    "INNER JOIN expenses E ON EP.expense_id = E.expense_id) AS subquery " +
+                    "WHERE person_name = ? AND payer_name = ?";
+			
+			PreparedStatement statement = connection.prepareStatement(query);
+			statement.setString(1,  fromUser);
+			statement.setString(2,  toUser);
+			
+			ResultSet resultSet = statement.executeQuery();
+			if (resultSet.next()) {
+				totalAmountOwed = resultSet.getDouble("total_amount_owed");
+			}
+			else {
+				System.out.println("Unable to calculate the total amount owed.");
+				
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		System.out.println(fromUser +  " owes " + toUser + "a total of $" + totalAmountOwed);
+		return totalAmountOwed;
 	}
 }

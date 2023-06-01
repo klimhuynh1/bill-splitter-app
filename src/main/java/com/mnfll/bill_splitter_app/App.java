@@ -24,7 +24,7 @@ public class App {
 			// Create a list to store portion names
 			List<String> portionNames = new ArrayList<>();
 			
-			System.out.print("Enter the date dd/mm/yyyy ");
+			System.out.print("Enter the date [dd/mm/yyyy] ");
 			String dateString = scanner.nextLine();
 			Date date = new SimpleDateFormat("dd/MM/yyyy").parse(dateString);
 			
