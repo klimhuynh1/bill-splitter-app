@@ -47,7 +47,8 @@ public class ExpenseDAO {
 		int expenseId = insertExpenseData(expense);
 	    insertExpensePersonsData(expense, personIds, expenseId);
 	}
-
+	
+	// TODO: Only add unique names as records
 	public List<Integer> insertPeopleData(Expense expense) {
 	    List<Integer> generatedKeys = new ArrayList<>();
 
@@ -183,7 +184,7 @@ public class ExpenseDAO {
 	public void insertExpensePersonsData(Expense expense, List<Integer> personIds, int expenseId) {
 	    try (Connection connection = establishConnection()) {
 	        // Create the 'expensePersons' table if it doesn't exist
-	        String createTableQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
+	        String query = "CREATE TABLE IF NOT EXISTS expensePersons (" +
 	                "expense_id INT NOT NULL, " +
 	                "person_id INT NOT NULL, " +
 	                "amount_owed DECIMAL(10,2) NOT NULL, " +
@@ -193,7 +194,7 @@ public class ExpenseDAO {
 	                ")";
 
 	        Statement createTableStatement = connection.createStatement();
-	        int tableCreated = createTableStatement.executeUpdate(createTableQuery);
+	        int tableCreated = createTableStatement.executeUpdate(query);
 
 	        if (tableCreated >= 0) {
 	            System.out.println("Table 'expensePersons' created successfully");
@@ -205,14 +206,14 @@ public class ExpenseDAO {
 	        String insertQuery = "INSERT INTO expensePersons (expense_id, person_id, amount_owed) " +
 	                "VALUES (?, ?, ?)";
 
-	        PreparedStatement statement = connection.prepareStatement(insertQuery);
+	        PreparedStatement insertTableStatement = connection.prepareStatement(insertQuery);
 
 	        for (Integer personId : personIds) {
-	            statement.setInt(1, expenseId);
-	            statement.setInt(2, personId);
-	            statement.setDouble(3, expense.calculateCostPerPortion());
+	        	insertTableStatement.setInt(1, expenseId);
+	        	insertTableStatement.setInt(2, personId);
+	        	insertTableStatement.setDouble(3, expense.calculateCostPerPortion());
 
-	            int rowsInserted = statement.executeUpdate();
+	            int rowsInserted = insertTableStatement.executeUpdate();
 
 	            if (rowsInserted > 0) {
 	                System.out.println("Record inserted into `expensePersons` table successfully");
@@ -226,11 +227,11 @@ public class ExpenseDAO {
 	    }
 	}
 	
-	public double CaculateTotalAmountOwed(String fromUser, String toUser) {
+	public double caculateTotalAmountOwed(String fromUser, String toUser) {
 		double totalAmountOwed = 0;
 		try (Connection connection = establishConnection()) {
 			String query = "SELECT SUM(amount_owed) AS total_amount_owed " +
-                    "FROM (SELECT EP.expense_id, EP.person_id, P.person_name, EP.amount_owed, E, payer_id, E.payer_name " +
+                    "FROM (SELECT EP.expense_id, EP.person_id, P.person_name, EP.amount_owed, E.payer_id, E.payer_name " +
                     "FROM expensePersons EP " +
                     "INNER JOIN people P ON EP.person_id = P.person_id " +
                     "INNER JOIN expenses E ON EP.expense_id = E.expense_id) AS subquery " +
@@ -253,7 +254,40 @@ public class ExpenseDAO {
 			e.printStackTrace();
 		}
 		
-		System.out.println(fromUser +  " owes " + toUser + "a total of $" + totalAmountOwed);
+		System.out.println(fromUser +  " owes " + toUser + " a total of $" + totalAmountOwed);
 		return totalAmountOwed;
 	}
+	
+	// Generate permutations of two names
+	public List<List<String>> generateNamePermutations() {
+		List<String> names = new ArrayList<>();
+		List<List<String>> permutations = new ArrayList<>(); 
+		
+		// Retrieve a list of all the portion names
+		try(Connection connection = establishConnection()) {
+			String query = "SELECT person_name FROM people";
+			
+			Statement statement = connection.createStatement();
+			ResultSet resultSet = statement.executeQuery(query);
+			
+			while(resultSet.next()) {
+				String personName = resultSet.getString("person_name");
+				names.add(personName);
+			}			
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		for (int i = 0; i < names.size(); i++) {
+			for (int j = 0; j < names.size(); j++) {
+				List<String> permutation = new ArrayList<>();
+				permutation.add(names.get(i));
+				permutation.add(names.get(j));
+				permutations.add(permutation);
+			}
+		}
+		
+	return permutations;
+	}	
 }
