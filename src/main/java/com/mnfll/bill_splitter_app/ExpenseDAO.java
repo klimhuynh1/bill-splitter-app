@@ -48,7 +48,6 @@ public class ExpenseDAO {
 	    insertExpensePersonsData(expense, personIds, expenseId);
 	}
 	
-	// TODO: Only add unique names as records
 	public List<Integer> insertPeopleData(Expense expense) {
 	    List<Integer> generatedKeys = new ArrayList<>();
 
@@ -68,25 +67,40 @@ public class ExpenseDAO {
 	            System.out.println("Failed to create table 'people'");
 	        }
 
-	        // Prepare the insert statement
+	        // Prepare the select statement to check if the name already exists
+	        String selectQuery = "SELECT person_id FROM people WHERE person_name = ?"; 
+	        
+	        // Prepare the insert statement to add new records to the `people` table
 	        String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
 
 	        for (String portionName : expense.getPortionNames()) {
-	            PreparedStatement statement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
-	            statement.setString(1, portionName);
+	        	// Check if the name already exists
+	        	PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+	        	selectStatement.setString(1, portionName);
+	        	ResultSet selectResultSet = selectStatement.executeQuery();
+	        	
+	        	if (selectResultSet.next()) {
+	        		// Name already exists, retrieve the person id
+	        		generatedKeys.add(selectResultSet.getInt("person_id"));
+	        	}
+	        	else {
+	        		// Name doesn't exist, insert a new record
+		            PreparedStatement statement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
+		            statement.setString(1, portionName);
 
-	            int rowsInserted = statement.executeUpdate();
-	            if (rowsInserted > 0) {
-	                System.out.println("Record inserted into `people` table successfully");
+		            int rowsInserted = statement.executeUpdate();
+		            if (rowsInserted > 0) {
+		                System.out.println("Record inserted into `people` table successfully");
 
-	                // Save the person_id to the ArrayList
-	                ResultSet resultSet = statement.getGeneratedKeys();
-	                if (resultSet.next()) {
-	                    generatedKeys.add(resultSet.getInt(1));
-	                }
-	            } else {
-	                System.out.println("Failed to insert into `people` table");
-	            }
+		                // Save the person_id to the ArrayList
+		                ResultSet resultSet = statement.getGeneratedKeys();
+		                if (resultSet.next()) {
+		                    generatedKeys.add(resultSet.getInt(1));
+		                }
+		            } else {
+		                System.out.println("Failed to insert into `people` table");
+		            }
+	        	}
 	        }
 	    } catch (SQLException e) {
 	        e.printStackTrace();
