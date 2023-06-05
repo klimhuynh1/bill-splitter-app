@@ -320,7 +320,6 @@ public class ExpenseDAO {
 	            System.out.println("No rows deleted from 'expensePersons' table.");
 	        }
 	        
-	        
 	        // Delete from expenses table
 	        String deleteExpensesQuery = "DELETE FROM expenses WHERE expense_id = ?";
 
@@ -336,10 +335,37 @@ public class ExpenseDAO {
 	            System.out.println("No rows deleted from 'expenses' table.");
 	        }
 	        
-	        // TODO: Delete from people table if they're not associated with any expenses
+	        // Delete from `people` table if they're not associated with any expenses
+	        String selectQuery = "SELECT person_id from people";
+	        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+	        ResultSet resultSet = selectStatement.executeQuery();
+	        
+	        // Iterate through the result set
+	        while (resultSet.next()) {
+	        	int personId = resultSet.getInt("person_id");
+	        	
+	        	// Check if the person_id exists in the person table
+	        	String checkQuery = "SELECT COUNT(*) FROM expensePersons WHERE person_id = ?";
+	        	PreparedStatement checkStatement = connection.prepareStatement(checkQuery);
+	        	checkStatement.setInt(1, personId);
+	        	ResultSet checkResult = checkStatement.executeQuery();
+	        	checkResult.next();
+	        	
+	        	int count = checkResult.getInt(1);
+	        	
+	        	if (count == 0) {
+	        		// Delete the user from the people table
+	        		String deleteQuery = "DELETE FROM people WHERE person_id = ?";
+	        		PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
+	        		deleteStatement.setInt(1, personId);
+	        		int rowsAffected = deleteStatement.executeUpdate();
+	        		
+	        		System.out.println(rowsAffected + " rows(s) for user ID: " + personId);
+	        	}
+	        }
+   
 	    } catch (SQLException e) {
 	        e.printStackTrace();
 	    }
 	}
-
 }

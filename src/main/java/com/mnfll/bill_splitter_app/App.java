@@ -142,8 +142,6 @@ public class App {
 		for (Expense expense : expenses) {
 			expense.displayExpense();
 			expenseDAO.saveExpenseDataToDatabase(expense);
-		}
-		
-		expenseDAO.deleteExpense(1);
+		}		
 	}
 }
