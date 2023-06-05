@@ -198,7 +198,7 @@ public class ExpenseDAO {
 	public void insertExpensePersonsData(Expense expense, List<Integer> personIds, int expenseId) {
 	    try (Connection connection = establishConnection()) {
 	        // Create the 'expensePersons' table if it doesn't exist
-	        String query = "CREATE TABLE IF NOT EXISTS expensePersons (" +
+	        String createQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
 	                "expense_id INT NOT NULL, " +
 	                "person_id INT NOT NULL, " +
 	                "amount_owed DECIMAL(10,2) NOT NULL, " +
@@ -208,7 +208,7 @@ public class ExpenseDAO {
 	                ")";
 
 	        Statement createTableStatement = connection.createStatement();
-	        int tableCreated = createTableStatement.executeUpdate(query);
+	        int tableCreated = createTableStatement.executeUpdate(createQuery);
 
 	        if (tableCreated >= 0) {
 	            System.out.println("Table 'expensePersons' created successfully");
@@ -244,14 +244,14 @@ public class ExpenseDAO {
 	public double caculateTotalAmountOwed(String fromUser, String toUser) {
 		double totalAmountOwed = 0;
 		try (Connection connection = establishConnection()) {
-			String query = "SELECT SUM(amount_owed) AS total_amount_owed " +
+			String selectQuery = "SELECT SUM(amount_owed) AS total_amount_owed " +
                     "FROM (SELECT EP.expense_id, EP.person_id, P.person_name, EP.amount_owed, E.payer_id, E.payer_name " +
                     "FROM expensePersons EP " +
                     "INNER JOIN people P ON EP.person_id = P.person_id " +
                     "INNER JOIN expenses E ON EP.expense_id = E.expense_id) AS subquery " +
                     "WHERE person_name = ? AND payer_name = ?";
 			
-			PreparedStatement statement = connection.prepareStatement(query);
+			PreparedStatement statement = connection.prepareStatement(selectQuery);
 			statement.setString(1,  fromUser);
 			statement.setString(2,  toUser);
 			
@@ -303,5 +303,43 @@ public class ExpenseDAO {
 		}
 		
 	return permutations;
-	}	
+	}
+	
+	public void deleteExpense(int expenseId) {
+	    try (Connection connection = establishConnection()) {
+	        // Delete from expensePersons table
+	        String deleteExpensePersonsQuery = "DELETE FROM expensePersons WHERE expense_id = ?";
+	        PreparedStatement expensePersonsStatement = connection.prepareStatement(deleteExpensePersonsQuery);
+	        expensePersonsStatement.setInt(1, expenseId);
+
+	        // Execute the statement
+	        int expensePersonsRowsAffected = expensePersonsStatement.executeUpdate();
+	        if (expensePersonsRowsAffected > 0) {
+	            System.out.println(expensePersonsRowsAffected + " row(s) deleted successfully from 'expensePersons' table.");
+	        } else {
+	            System.out.println("No rows deleted from 'expensePersons' table.");
+	        }
+	        
+	        
+	        // Delete from expenses table
+	        String deleteExpensesQuery = "DELETE FROM expenses WHERE expense_id = ?";
+
+	        // Prepare the statement
+	        PreparedStatement expensesStatement = connection.prepareStatement(deleteExpensesQuery);
+	        expensesStatement.setInt(1, expenseId);
+
+	        // Execute the statement
+	        int expensesRowsAffected = expensesStatement.executeUpdate();
+	        if (expensesRowsAffected > 0) {
+	            System.out.println(expensesRowsAffected + " row(s) deleted successfully from 'expenses' table.");
+	        } else {
+	            System.out.println("No rows deleted from 'expenses' table.");
+	        }
+	        
+	        // TODO: Delete from people table if they're not associated with any expenses
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	}
+
 }

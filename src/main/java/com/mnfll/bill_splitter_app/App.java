@@ -78,7 +78,7 @@ public class App {
 				System.out.print("Enter the item total cost ");
 				String userInput = scanner.nextLine();
 				
-				if (InputValidator.isValidCost(expenseName)) {
+				if (InputValidator.isValidCost(userInput)) {
 					expenseCost = Double.parseDouble(userInput);
 					isValidExpenseCost = true;
 				}
@@ -142,6 +142,8 @@ public class App {
 		for (Expense expense : expenses) {
 			expense.displayExpense();
 			expenseDAO.saveExpenseDataToDatabase(expense);
-		}		
+		}
+		
+		expenseDAO.deleteExpense(1);
 	}
 }
