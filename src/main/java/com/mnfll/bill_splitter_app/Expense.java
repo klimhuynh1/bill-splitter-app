@@ -65,8 +65,4 @@ public class Expense {
 		System.out.println("Payer Name: " + getPayerName());
 		System.out.println("---------------------------");
 	}
-	
-	public double calculateCostPerPortion() {		
-		return getItemCost() / getPortionNames().size();
-	}
 }

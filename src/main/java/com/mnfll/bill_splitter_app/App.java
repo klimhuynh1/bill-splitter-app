@@ -12,14 +12,52 @@ import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
 public class App {
 
-	public static void main(String[] args) throws ParseException, Exception {
+	public static void main(String[] args)  {
 		// Create a Scanner object to read user input
 		Scanner scanner = new Scanner(System.in);
-		ExpenseDAO expenseDAO  = new ExpenseDAO();
 		
+
+		
+		boolean running = true;
+		
+		System.out.println("Welcome to the bill splitter app");
+		while (running) {
+			System.out.println("\nPlease select an option:");
+			System.out.println("1. Add an expense");
+			System.out.println("2. Edit an expense");
+			System.out.println("3. Exit");
+			
+			String userInput = scanner.nextLine();
+			
+			switch(userInput) {
+				case "1":
+//					addExpense(scanner);
+					break;
+				case "2":
+//					editExpense();
+					break;
+				case "3":
+//					deleteExpense();
+					break;
+				case "4":
+					running = false;
+					break;
+				default:
+					System.out.println("Invalid input. Please try again");
+					break;
+			}
+		}
+		
+		System.out.println("Thank you for using the bill splitter app");
+		scanner.close();
+		
+	}
+	
+	public static void addExpense(Scanner scanner) throws ParseException, Exception {
 		// Create a list to store expenses
 		List<Expense> expenses = new ArrayList<>();
-
+		// Create a expenseDAO object to perform SQL operations
+		ExpenseDAO expenseDAO  = new ExpenseDAO();
 		boolean addMoreExpenses = true;
 		
 		while (addMoreExpenses) {
@@ -46,7 +84,7 @@ public class App {
 					isValidDate = true;
 				}
 				else {
-				System.out.print("Invalid date format. Please enter the date in dd/mm/yyyy format.");
+				System.out.print("Invalid date format. Please enter the date in dd/mm/yyyy format. ");
 				}
 			}
 			
@@ -58,7 +96,7 @@ public class App {
 					isValidEstablishmentName = true;
 				}
 				else {
-					System.out.print("Invalid establishment name. Please enter a valid establishment name ");
+					System.out.print("Invalid establishment name. Please enter a valid establishment name. ");
 				}
 			}
 			
@@ -66,11 +104,11 @@ public class App {
 				System.out.print("Enter the item name ");
 				expenseName = scanner.nextLine();
 				
-				if (InputValidator.isValidEstablishmentName(expenseName)) {
+				if (InputValidator.isValidExpenseName(expenseName)) {
 					isValidExpenseName = true;
 				}
 				else {
-					System.out.print("Invalid expense name. Please enter a valid expense name ");
+					System.out.print("Invalid expense name. Please enter a valid expense name. ");
 				}
 			}
 			
@@ -83,7 +121,7 @@ public class App {
 					isValidExpenseCost = true;
 				}
 				else {
-					System.out.print("Invalid expense cost. Please enter a valid expense cost ");
+					System.out.print("Invalid expense cost. Please enter a valid expense cost. ");
 				}
 			}
 			
@@ -96,7 +134,7 @@ public class App {
 					isValidPortionNumber = true;
 				}
 				else {
-					System.out.print("Invalid expense cost. Please enter a valid expense cost ");
+					System.out.print("Invalid expense cost. Please enter a valid expense cost. ");
 				}
 			}
 			
@@ -114,7 +152,7 @@ public class App {
 						isValidPortionName = true;
 					}
 					else {
-						System.out.print("Invalid portion name. Please enter a valid portion name ");
+						System.out.print("Invalid portion name. Please enter a valid portion name. ");
 					}
 				}
 			}
@@ -137,11 +175,16 @@ public class App {
 			}			
 		}
 		
-		scanner.close();
-		
 		for (Expense expense : expenses) {
 			expense.displayExpense();
 			expenseDAO.saveExpenseDataToDatabase(expense);
-		}		
+		}
+	}
+		
+	public static void editExpense(Scanner scanner) {
+		// Create a expenseDAO object to perform SQL operations
+		ExpenseDAO expenseDAO  = new ExpenseDAO();
+		int userInput = Integer.parseInt(scanner.nextLine());
+		expenseDAO.deleteExpense(userInput);
 	}
 }

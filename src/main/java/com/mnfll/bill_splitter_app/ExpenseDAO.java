@@ -12,6 +12,11 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Scanner;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+
+import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
 public class ExpenseDAO {
 	private static final String CONFIG_FILE_PATH = System.getProperty("user.dir") + "\\config.properties";
@@ -225,7 +230,7 @@ public class ExpenseDAO {
 	        for (Integer personId : personIds) {
 	        	insertTableStatement.setInt(1, expenseId);
 	        	insertTableStatement.setInt(2, personId);
-	        	insertTableStatement.setDouble(3, expense.calculateCostPerPortion());
+	        	insertTableStatement.setDouble(3, expense.getItemCost()/expense.getPortionNames().size());
 
 	            int rowsInserted = insertTableStatement.executeUpdate();
 
@@ -305,6 +310,164 @@ public class ExpenseDAO {
 	return permutations;
 	}
 	
+	public void updateExpense(int expenseId, String updateOption, Scanner scanner) throws ParseException {
+		try (Connection connection = establishConnection()) {
+			switch (updateOption) {
+		    case "editDate":
+		    	updateExpenseDate(expenseId, scanner);   	
+		        break;
+		    case "editEstablishmentName":
+		        updateExpenseEstablishmentName(expenseId, scanner);
+		        break;
+		    case "editExpenseName":
+		    	updateExpenseName(expenseId, scanner);
+		        break;
+		    case "editExpenseCost":
+		    	//
+		        break;
+		    case "addPortionname":
+		        // Add new user if they don't already exist in `people` table
+		        // Update split_count `expense` table
+		        // Re-calculate cost per portion and update amount_owed based on expense_id
+		        // Add new record to `expensePersons` table for the new portion
+		        break;
+		    case "removePortionName":
+		        // Remove record in `expensePersons` table based on expense_id
+		        // Update split_count in `expenses` table based on expense_id
+		        // Re-calculate cost per portion and update amount_owed based on expense_id
+		        break;
+		    case "editPayerName":
+		        // Edit payer_name in `expense` table based on expense_id
+		        break;
+		    case "deleteExpense":
+		        deleteExpense(expenseId);
+		        break;
+		    default:
+		        System.out.println("Invalid update option");
+			}	
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void updateExpenseDate(int expenseId, Scanner scanner) {
+		try (Connection connection = establishConnection()) {
+	    	java.util.Date date = null;
+	    	Date sqlDate = null;
+	    	boolean isValidDate = false;
+	    	
+	    	while (!isValidDate) {
+		    	System.out.println("Enter the new date [dd/MM/yyyy]");
+		    	String dateString = scanner.nextLine();
+
+		    	
+		    	if (InputValidator.isValidDate(dateString)) {
+		    		try {
+						date = new SimpleDateFormat("dd/MM/yyyy").parse(dateString);
+					} catch (ParseException e) {
+						e.printStackTrace();
+					}
+		    		isValidDate = true;
+		    	}
+				else {
+					System.out.print("Invalid date format. Please enter the date in dd/mm/yyyy format. ");
+				}	
+	    	}
+	    	
+	        // Convert java.util.Date to java.sql.Date
+	    	sqlDate = new Date(date.getTime());
+	        
+	    	// Update expense_date in `expenses` table based on expense_id
+	    	String query = "UPDATE expenses SET expense_date = ? WHERE expense_id = ?";
+	    	PreparedStatement statement = connection.prepareStatement(query);
+	    	
+	    	statement.setDate(1, sqlDate);
+	    	statement.setInt(2, expenseId);
+	    	
+	    	// Execute the update query
+	    	int rowsAffected = statement.executeUpdate();
+	    	
+	    	// Check the number of rows affected
+	    	System.out.println("Rows affected: " + rowsAffected);
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void updateExpenseEstablishmentName(int expenseId, Scanner scanner) {
+		try (Connection connection = establishConnection()) {
+			String establishmentName = null;
+	    	boolean isValidEstablishmentName = false;
+	    	
+	    	while (!isValidEstablishmentName) {
+	    		 establishmentName = scanner.nextLine();
+	    		System.out.println("Enter the new establishment name");
+		    	if (InputValidator.isValidEstablishmentName(establishmentName)) {
+		    		
+		    		isValidEstablishmentName = true;
+		    	}
+				else {
+					System.out.print("Invalid establishment name. Please enter a valid establishment name. ");
+				}	
+	    	}
+	    	
+	    	// Update establishment_name in `expenses` table based on expense_id
+	    	String query = "UPDATE expenses SET establishment_name = ? WHERE expense_id = ?";
+	    	PreparedStatement statement = connection.prepareStatement(query);
+	    	
+	    	statement.setString(1, establishmentName);
+	    	statement.setInt(2, expenseId);
+	    	
+	    	// Execute the update query
+	    	int rowsAffected = statement.executeUpdate();
+	    	
+	    	// Check the number of rows affected
+	    	System.out.println("Rows affected: " + rowsAffected);
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void updateExpenseName(int expenseId, Scanner scanner) {
+		try (Connection connection = establishConnection()) {
+			String expenseName = null;
+	    	boolean isValidExpenseName = false;
+	    	
+	    	
+	    	while (!isValidExpenseName) {
+		    	System.out.println("Enter the new expense name");
+		    	expenseName = scanner.nextLine();
+		    	
+		    	if (InputValidator.isValidExpenseName(expenseName)) {		    		
+		    		isValidExpenseName = true;
+		    	}
+				else {
+					System.out.print("Invalid expense name. Please enter a valid expense name. ");
+				}	
+	    	}
+	    	
+	        
+	    	// Update expense_date in `expenses` table based on expense_id
+	    	String query = "UPDATE expenses SET expense_name = ? WHERE expense_id = ?";
+	    	PreparedStatement statement = connection.prepareStatement(query);
+	    	
+	    	statement.setString(1, expenseName);
+	    	statement.setInt(2, expenseId);
+	    	
+	    	// Execute the update query
+	    	int rowsAffected = statement.executeUpdate();
+	    	
+	    	// Check the number of rows affected
+	    	System.out.println("Rows affected: " + rowsAffected);
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public void deleteExpense(int expenseId) {
 	    try (Connection connection = establishConnection()) {
 	        // Delete from expensePersons table
