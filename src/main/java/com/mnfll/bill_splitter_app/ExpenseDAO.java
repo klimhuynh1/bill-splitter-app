@@ -323,13 +323,10 @@ public class ExpenseDAO {
 		    	updateExpenseName(expenseId, scanner);
 		        break;
 		    case "editExpenseCost":
-		    	//
+		    	updateExpenseCost(expenseId, scanner);
 		        break;
 		    case "addPortionname":
-		        // Add new user if they don't already exist in `people` table
-		        // Update split_count `expense` table
-		        // Re-calculate cost per portion and update amount_owed based on expense_id
-		        // Add new record to `expensePersons` table for the new portion
+		    	addPortionName(expenseId, scanner);
 		        break;
 		    case "removePortionName":
 		        // Remove record in `expensePersons` table based on expense_id
@@ -351,6 +348,121 @@ public class ExpenseDAO {
 		}
 	}
 	
+	public void addPortionName(int expenseId, Scanner scanner) {
+	    try (Connection connection = establishConnection()) {
+	        String portionName = getValidPortionName(scanner);
+	        int personId = addNewPersonIfNotExists(connection, portionName);
+	        int splitCount = updateSplitCount(connection, expenseId);
+	        double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
+	        updateAmountOwed(connection, expenseId, newAmountOwed);
+	        addExpensePersonRecord(connection, expenseId, personId, newAmountOwed);
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	}
+
+	private String getValidPortionName(Scanner scanner) {
+	    String portionName = null;
+	    boolean isValidPortionName = false;
+	    
+	    while (!isValidPortionName) {
+	        System.out.println("Enter the new portion name");
+	        portionName = scanner.nextLine();
+	        
+	        if (InputValidator.isValidPortionName(portionName)) {
+	            isValidPortionName = true;
+	        } else {
+	            System.out.println("Invalid portion name. Please enter a valid portion name.");
+	        }
+	    }
+	    
+	    return portionName;
+	}
+
+	private int addNewPersonIfNotExists(Connection connection, String portionName) throws SQLException {
+	    String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
+	    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+	    selectStatement.setString(1, portionName);
+	    ResultSet selectResultSet = selectStatement.executeQuery();
+	    
+	    if (selectResultSet.next()) {
+	        // Person already exists, retrieve the person id
+	        return selectResultSet.getInt("person_id");
+	    } else {
+	        // Person does not exist, create a new record
+	        String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
+	        PreparedStatement insertStatement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
+	        insertStatement.setString(1, portionName);
+	        insertStatement.executeUpdate();
+	        
+	        // Retrieve the generated person_id
+	        ResultSet generatedKeys = insertStatement.getGeneratedKeys();
+	        if (generatedKeys.next()) {
+	            return generatedKeys.getInt(1);
+	        }
+	    }
+	    
+	    return -1; // Return a default value if personId is not found (shouldn't happen)
+	}
+
+	private int updateSplitCount(Connection connection, int expenseId) throws SQLException {
+	    String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
+	    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+	    selectStatement.setInt(1, expenseId);
+	    ResultSet selectResultSet = selectStatement.executeQuery();
+	    
+	    if (selectResultSet.next()) {
+	        int splitCount = selectResultSet.getInt("split_count") + 1;
+	        
+	        String updateQuery = "UPDATE expenses SET split_count = ? WHERE expense_id = ?";
+	        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+	        updateStatement.setInt(1, splitCount);
+	        updateStatement.setInt(2, expenseId);
+	        
+	        int rowsAffected = updateStatement.executeUpdate();
+	        System.out.println("Update split_count -- Rows affected: " + rowsAffected);
+	        
+	        return splitCount;
+	    }
+	    
+	    return 0; // Return a default value if splitCount is not found (shouldn't happen)
+	}
+
+	private double calculateNewAmountOwed(Connection connection, int expenseId, int splitCount) throws SQLException {
+	    String selectQuery = "SELECT total_cost FROM expenses WHERE expense_id = ?";
+	    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+	    selectStatement.setInt(1, expenseId);
+	    ResultSet selectResultSet = selectStatement.executeQuery();
+	    
+	    if (selectResultSet.next()) {
+	        double expenseCost = selectResultSet.getDouble("total_cost");
+	        return expenseCost / splitCount;
+	    }
+	    
+	    return 0.0; // Return a default value if newAmountOwed is not found (shouldn't happen)
+	}
+
+	private void updateAmountOwed(Connection connection, int expenseId, double newAmountOwed) throws SQLException {
+	    String updateQuery = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
+	    PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+	    updateStatement.setDouble(1, newAmountOwed);
+	    updateStatement.setInt(2, expenseId);
+	    
+	    int rowsAffected = updateStatement.executeUpdate();
+	    System.out.println("Update amount owed -- Rows affected: " + rowsAffected);
+	}
+
+	private void addExpensePersonRecord(Connection connection, int expenseId, int personId, double newAmountOwed) throws SQLException {
+	    String insertQuery = "INSERT INTO expensePersons (expense_id, person_id, amount_owed) VALUES (?, ?, ?)";
+	    PreparedStatement statement = connection.prepareStatement(insertQuery);
+	    statement.setInt(1, expenseId);
+	    statement.setInt(2, personId);
+	    statement.setDouble(3, newAmountOwed);
+	    
+	    int rowsAffected = statement.executeUpdate();
+	    System.out.println("Add row for new portion name -- Rows affected: " + rowsAffected);
+	}
+
 	public void updateExpenseDate(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
 	    	java.util.Date date = null;
@@ -371,7 +483,7 @@ public class ExpenseDAO {
 		    		isValidDate = true;
 		    	}
 				else {
-					System.out.print("Invalid date format. Please enter the date in dd/mm/yyyy format. ");
+					System.out.println("Invalid date format. Please enter the date in dd/mm/yyyy format. ");
 				}	
 	    	}
 	    	
@@ -409,7 +521,7 @@ public class ExpenseDAO {
 		    		isValidEstablishmentName = true;
 		    	}
 				else {
-					System.out.print("Invalid establishment name. Please enter a valid establishment name. ");
+					System.out.println("Invalid establishment name. Please enter a valid establishment name. ");
 				}	
 	    	}
 	    	
@@ -445,11 +557,10 @@ public class ExpenseDAO {
 		    		isValidExpenseName = true;
 		    	}
 				else {
-					System.out.print("Invalid expense name. Please enter a valid expense name. ");
+					System.out.println("Invalid expense name. Please enter a valid expense name. ");
 				}	
 	    	}
 	    	
-	        
 	    	// Update expense_date in `expenses` table based on expense_id
 	    	String query = "UPDATE expenses SET expense_name = ? WHERE expense_id = ?";
 	    	PreparedStatement statement = connection.prepareStatement(query);
@@ -466,6 +577,68 @@ public class ExpenseDAO {
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+	
+    // Update total_cost in `expense` table based on expense_id
+	public void updateExpenseCost(int expenseId, Scanner scanner) {
+	    try (Connection connection = establishConnection()) {
+	        double expenseCost = 0;
+	        boolean isValidExpenseCost = false;
+
+	        while (!isValidExpenseCost) {
+	            System.out.println("Enter the new expense cost:");
+	            String userInput = scanner.nextLine();
+
+	            if (InputValidator.isValidCost(userInput)) {
+	                expenseCost = Double.parseDouble(userInput);
+	                isValidExpenseCost = true;
+	            } else {
+	                System.out.print("Invalid expense cost. Please enter a valid expense cost. ");
+	            }
+	        }
+
+	        // Update expense_cost in `expenses` table based on expense_id
+	        String updateQuery = "UPDATE expenses SET total_cost = ? WHERE expense_id = ?";
+	        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+	        updateStatement.setDouble(1, expenseCost);
+	        updateStatement.setInt(2, expenseId);
+
+	        // Execute the update query
+	        int rowsAffected = updateStatement.executeUpdate();
+
+	        // Check the number of rows affected
+	        System.out.println("Rows affected: " + rowsAffected);
+
+	        // Get the number of people that splitting this expense cost
+	        String selectQuery = "SELECT split_count FROM expense WHERE expense_id = ?";
+	        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+	        selectStatement.setInt(1, expenseId);
+
+	        // Execute the select query
+	        ResultSet resultSet = selectStatement.executeQuery();
+	        int splitCount = 0;
+	        if (resultSet.next()) {
+	            splitCount = resultSet.getInt("split_count");
+	            System.out.println("Split count: " + splitCount);
+	        }
+
+	        // Re-calculate the cost per person
+	        double newAmountOwed = expenseCost / splitCount;
+
+	        // Update amount_owed in `expensePersons` table for each person
+	        String updateAmountOwedQuery = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
+	        PreparedStatement updateAmountOwedStatement = connection.prepareStatement(updateAmountOwedQuery);
+	        updateAmountOwedStatement.setDouble(1, newAmountOwed);
+	        updateAmountOwedStatement.setInt(2, expenseId);
+
+	        // Execute the update query
+	        int rowsUpdated = updateAmountOwedStatement.executeUpdate();
+
+	        // Check the number of rows updated
+	        System.out.println("Rows updated: " + rowsUpdated);
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
 	}
 
 	public void deleteExpense(int expenseId) {
