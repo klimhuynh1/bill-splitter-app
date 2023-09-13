@@ -310,35 +310,36 @@ public class ExpenseDAO {
 	return permutations;
 	}
 	
-	public void updateExpense(int expenseId, String updateOption, Scanner scanner) throws ParseException {
+	public void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
 		try (Connection connection = establishConnection()) {
 			switch (updateOption) {
-		    case "editDate":
+		    case 1:
 		    	updateExpenseDate(expenseId, scanner);   	
 		        break;
-		    case "editEstablishmentName":
+		    case 2:
 		        updateExpenseEstablishmentName(expenseId, scanner);
 		        break;
-		    case "editExpenseName":
+		    case 3:
 		    	updateExpenseName(expenseId, scanner);
 		        break;
-		    case "editExpenseCost":
+		    case 4:
 		    	updateExpenseCost(expenseId, scanner);
 		        break;
-		    case "addPortionname":
+		    case 5:
 		    	addPortionName(expenseId, scanner);
 		        break;
-		    case "removePortionName":
+		    case 6:
 		    	// Find person_id of the person you're trying to remove found in `people` table
 		        // Remove record in `expensePersons` table based on person_id and expense_id
 		        // Update split_count in `expenses` table based on expense_id
 		        // Re-calculate cost per portion and update amount_owed based on expense_id
 		    	removePortionName(expenseId, scanner);
 		        break;
-		    case "editPayerName":
+		    case 7:
 		        // Edit payer_name in `expense` table based on expense_id
+		    	updatePayerName(expenseId, scanner);
 		        break;
-		    case "deleteExpense":
+		    case 8:
 		        deleteExpense(expenseId);
 		        break;
 		    default:
@@ -350,10 +351,44 @@ public class ExpenseDAO {
 		}
 	}
 	
+	public void updatePayerName(int expenseId, Scanner scanner) {
+		try (Connection connection = establishConnection()) {
+			boolean isValidName = false;
+			String newPayerName = "";
+			
+			while (!isValidName) {
+				System.out.println("Enter a new payer name");
+				newPayerName = scanner.nextLine();
+				
+				if (InputValidator.isValidName(newPayerName)) {
+					isValidName = true;
+				}
+				else {
+					System.out.println("Invalid name. Please enter a valid name");
+				}					
+			}
+			
+			String updateStatement = "UPDATE expense SET payer_name = ? WHERE expense_id = ?";
+			PreparedStatement preparedStatement = connection.prepareStatement(updateStatement);
+			preparedStatement.setString(1, newPayerName);
+			preparedStatement.setInt(2, expenseId);
+			
+			int rowsAffected = preparedStatement.executeUpdate();
+			
+			if (rowsAffected > 0) {
+				System.out.println("Update successful.");
+			}
+			else {
+				System.out.println("No rows were updated.");
+			}			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}		
+	}
+	
 	public void removePortionName(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
-			System.out.println();
-			String portionName = getValidPortionName(scanner);
+			String portionName = getValidName(scanner);
 			int personId;
 			
 			String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
@@ -382,8 +417,8 @@ public class ExpenseDAO {
 	
 	public void addPortionName(int expenseId, Scanner scanner) {
 	    try (Connection connection = establishConnection()) {
-	        String portionName = getValidPortionName(scanner);
-	        int personId = addNewPersonIfNotExists(connection, portionName);
+	        String newPortionName = getValidName(scanner);
+	        int personId = addNewPersonIfNotExists(connection, newPortionName);
 	        int splitCount = updateSplitCount(connection, expenseId, true);
 	        double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
 	        updateAmountOwed(connection, expenseId, newAmountOwed);
@@ -393,7 +428,7 @@ public class ExpenseDAO {
 	    }
 	}
 
-	private String getValidPortionName(Scanner scanner) {
+	private String getValidName(Scanner scanner) {
 	    String portionName = null;
 	    boolean isValidPortionName = false;
 	    
@@ -401,7 +436,7 @@ public class ExpenseDAO {
 	        System.out.println("Enter the new portion name");
 	        portionName = scanner.nextLine();
 	        
-	        if (InputValidator.isValidPortionName(portionName)) {
+	        if (InputValidator.isValidName(portionName)) {
 	            isValidPortionName = true;
 	        } else {
 	            System.out.println("Invalid portion name. Please enter a valid portion name.");
@@ -410,6 +445,8 @@ public class ExpenseDAO {
 	    
 	    return portionName;
 	}
+	
+	
 
 	private int addNewPersonIfNotExists(Connection connection, String portionName) throws SQLException {
 	    String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
@@ -464,7 +501,7 @@ public class ExpenseDAO {
 	        return splitCount;
 	    }
 	    
-	    return 0; // Return a default value if splitCount is not found (shouldn't happen)
+	    return -1; // Return a default value if splitCount is not found (shouldn't happen)
 	}
 
 	private double calculateNewAmountOwed(Connection connection, int expenseId, int splitCount) throws SQLException {
@@ -478,7 +515,7 @@ public class ExpenseDAO {
 	        return expenseCost / splitCount;
 	    }
 	    
-	    return 0.0; // Return a default value if newAmountOwed is not found (shouldn't happen)
+	    return -1; // Return a default value if newAmountOwed is not found (shouldn't happen)
 	}
 
 	private void updateAmountOwed(Connection connection, int expenseId, double newAmountOwed) throws SQLException {
