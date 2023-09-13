@@ -63,7 +63,7 @@ public class InputValidator {
 		return matcher.matches();
 	}
 	
-	public static boolean isValidPortionName(String input) {
+	public static boolean isValidName(String input) {
 		input = sanitizeInput(input);
 		Matcher matcher = NAME_PATTERN.matcher(input);
 		
