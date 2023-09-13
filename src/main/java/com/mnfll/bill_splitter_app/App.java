@@ -12,7 +12,7 @@ import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
 public class App {
 
-	public static void main(String[] args)  {
+	public static void main(String[] args) throws Exception  {
 		// Create a Scanner object to read user input
 		Scanner scanner = new Scanner(System.in);
 		
@@ -31,15 +31,12 @@ public class App {
 			
 			switch(userInput) {
 				case "1":
-//					addExpense(scanner);
+					addExpense(scanner);
 					break;
 				case "2":
-//					editExpense();
+					//editExpense();
 					break;
 				case "3":
-//					deleteExpense();
-					break;
-				case "4":
 					running = false;
 					break;
 				default:

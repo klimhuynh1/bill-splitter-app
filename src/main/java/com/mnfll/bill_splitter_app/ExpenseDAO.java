@@ -329,9 +329,11 @@ public class ExpenseDAO {
 		    	addPortionName(expenseId, scanner);
 		        break;
 		    case "removePortionName":
-		        // Remove record in `expensePersons` table based on expense_id
+		    	// Find person_id of the person you're trying to remove found in `people` table
+		        // Remove record in `expensePersons` table based on person_id and expense_id
 		        // Update split_count in `expenses` table based on expense_id
 		        // Re-calculate cost per portion and update amount_owed based on expense_id
+		    	removePortionName(expenseId, scanner);
 		        break;
 		    case "editPayerName":
 		        // Edit payer_name in `expense` table based on expense_id
@@ -348,11 +350,41 @@ public class ExpenseDAO {
 		}
 	}
 	
+	public void removePortionName(int expenseId, Scanner scanner) {
+		try (Connection connection = establishConnection()) {
+			System.out.println();
+			String portionName = getValidPortionName(scanner);
+			int personId;
+			
+			String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
+			PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
+			preparedStatement .setString(1, portionName);
+			
+			ResultSet resultSet = preparedStatement.executeQuery();
+			
+			while (resultSet.next()) {
+				personId = resultSet.getInt("person_id");
+			}
+			
+			
+			String deleteQuery = "DELETE expense_id FROM expensePersons WHERE expense_id = ? AND person_id = ?";
+			PreparedStatement preparedStatement1 = connection.prepareStatement(deleteQuery);
+			preparedStatement1.executeUpdate();
+			
+			int splitCount = updateSplitCount(connection, expenseId, false);
+			double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
+			updateAmountOwed(connection, expenseId, newAmountOwed);		
+			
+		} catch (SQLException e) {
+            e.printStackTrace();
+        }
+	}
+	
 	public void addPortionName(int expenseId, Scanner scanner) {
 	    try (Connection connection = establishConnection()) {
 	        String portionName = getValidPortionName(scanner);
 	        int personId = addNewPersonIfNotExists(connection, portionName);
-	        int splitCount = updateSplitCount(connection, expenseId);
+	        int splitCount = updateSplitCount(connection, expenseId, true);
 	        double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
 	        updateAmountOwed(connection, expenseId, newAmountOwed);
 	        addExpensePersonRecord(connection, expenseId, personId, newAmountOwed);
@@ -405,14 +437,21 @@ public class ExpenseDAO {
 	    return -1; // Return a default value if personId is not found (shouldn't happen)
 	}
 
-	private int updateSplitCount(Connection connection, int expenseId) throws SQLException {
+	private int updateSplitCount(Connection connection, int expenseId, Boolean increment) throws SQLException {
 	    String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
 	    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
 	    selectStatement.setInt(1, expenseId);
 	    ResultSet selectResultSet = selectStatement.executeQuery();
+	    int splitCount = 0;
 	    
 	    if (selectResultSet.next()) {
-	        int splitCount = selectResultSet.getInt("split_count") + 1;
+	    	if (increment) {
+	    		splitCount = selectResultSet.getInt("split_count") + 1;
+	    	}
+	    	else {
+	    		splitCount = selectResultSet.getInt("split_count") - 1;
+	    	}
+	        
 	        
 	        String updateQuery = "UPDATE expenses SET split_count = ? WHERE expense_id = ?";
 	        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
