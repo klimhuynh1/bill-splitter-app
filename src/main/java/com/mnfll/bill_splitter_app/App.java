@@ -34,7 +34,7 @@ public class App {
 					addExpense(scanner);
 					break;
 				case "2":
-					//editExpense();
+					editExpense(scanner);
 					break;
 				case "3":
 					running = false;
@@ -70,7 +70,7 @@ public class App {
 			boolean isValidExpenseName = false;
 			boolean isValidExpenseCost = false;
 			boolean isValidPortionNumber = false;
-			boolean isValidPortionName = false;
+			boolean isValidName = false;
 			
 			while (!isValidDate) {
 				System.out.print("Enter the date [dd/MM/yyyy] ");
@@ -137,16 +137,16 @@ public class App {
 			
 			String name;
 			for (int i = 0; i < portionNumber; i++) {
-				isValidPortionName = false;
+				isValidName = false;
 				
-				while(!isValidPortionName) {
+				while(!isValidName) {
 					System.out.print("Enter portion name " + (i+1) + " ");
 					name = scanner.nextLine();
 					
-					if (InputValidator.isValidPortionName(name)) {
+					if (InputValidator.isValidName(name)) {
 						portionNames.add(name);
 						System.out.println(name + " has been added");
-						isValidPortionName = true;
+						isValidName  = true;
 					}
 					else {
 						System.out.print("Invalid portion name. Please enter a valid portion name. ");
@@ -177,11 +177,28 @@ public class App {
 			expenseDAO.saveExpenseDataToDatabase(expense);
 		}
 	}
-		
+	
+	// TODO: Validate the user inputs
 	public static void editExpense(Scanner scanner) {
 		// Create a expenseDAO object to perform SQL operations
 		ExpenseDAO expenseDAO  = new ExpenseDAO();
-		int userInput = Integer.parseInt(scanner.nextLine());
-		expenseDAO.deleteExpense(userInput);
+		System.out.println("Enter the expense ID: ");
+		int expenseId = Integer.parseInt(scanner.nextLine());
+		System.out.println("What would you like to edit?");
+		System.out.println("1. Update expense date");
+		System.out.println("2. Update establishment name");
+		System.out.println("3. Update expense name");
+		System.out.println("4. Update expense cost");
+		System.out.println("5. Add portion name");
+		System.out.println("6. Remove portion name");
+		System.out.println("7. Update payer name");
+		System.out.println("8. Delete expense");
+		int updateOption = Integer.parseInt(scanner.nextLine());
+		
+		try {
+			expenseDAO.updateExpense(expenseId, updateOption, scanner);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
 	}
 }
