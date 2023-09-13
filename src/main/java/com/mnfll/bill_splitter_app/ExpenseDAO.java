@@ -310,6 +310,7 @@ public class ExpenseDAO {
 	return permutations;
 	}
 	
+//	TODO: Do some testing
 	public void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
 		try (Connection connection = establishConnection()) {
 			switch (updateOption) {
@@ -351,6 +352,8 @@ public class ExpenseDAO {
 		}
 	}
 	
+	// TODO: Update both payer_id and payer_name
+	// TODO: Create a new entry for people table if they don't exist
 	public void updatePayerName(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
 			boolean isValidName = false;
@@ -368,7 +371,7 @@ public class ExpenseDAO {
 				}					
 			}
 			
-			String updateStatement = "UPDATE expense SET payer_name = ? WHERE expense_id = ?";
+			String updateStatement = "UPDATE expenses SET payer_name = ? WHERE expense_id = ?";
 			PreparedStatement preparedStatement = connection.prepareStatement(updateStatement);
 			preparedStatement.setString(1, newPayerName);
 			preparedStatement.setInt(2, expenseId);
@@ -389,7 +392,7 @@ public class ExpenseDAO {
 	public void removePortionName(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
 			String portionName = getValidName(scanner);
-			int personId;
+			int personId = 0;
 			
 			String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
 			PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
@@ -401,9 +404,10 @@ public class ExpenseDAO {
 				personId = resultSet.getInt("person_id");
 			}
 			
-			
-			String deleteQuery = "DELETE expense_id FROM expensePersons WHERE expense_id = ? AND person_id = ?";
+			String deleteQuery = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
 			PreparedStatement preparedStatement1 = connection.prepareStatement(deleteQuery);
+			preparedStatement1.setInt(1, expenseId);
+			preparedStatement1.setInt(2, personId);
 			preparedStatement1.executeUpdate();
 			
 			int splitCount = updateSplitCount(connection, expenseId, false);
@@ -433,7 +437,7 @@ public class ExpenseDAO {
 	    boolean isValidPortionName = false;
 	    
 	    while (!isValidPortionName) {
-	        System.out.println("Enter the new portion name");
+	        System.out.println("Enter the name");
 	        portionName = scanner.nextLine();
 	        
 	        if (InputValidator.isValidName(portionName)) {
@@ -590,8 +594,9 @@ public class ExpenseDAO {
 	    	boolean isValidEstablishmentName = false;
 	    	
 	    	while (!isValidEstablishmentName) {
-	    		 establishmentName = scanner.nextLine();
 	    		System.out.println("Enter the new establishment name");
+	    		 establishmentName = scanner.nextLine();
+	    		
 		    	if (InputValidator.isValidEstablishmentName(establishmentName)) {
 		    		
 		    		isValidEstablishmentName = true;
@@ -686,7 +691,7 @@ public class ExpenseDAO {
 	        System.out.println("Rows affected: " + rowsAffected);
 
 	        // Get the number of people that splitting this expense cost
-	        String selectQuery = "SELECT split_count FROM expense WHERE expense_id = ?";
+	        String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
 	        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
 	        selectStatement.setInt(1, expenseId);
 
@@ -695,7 +700,6 @@ public class ExpenseDAO {
 	        int splitCount = 0;
 	        if (resultSet.next()) {
 	            splitCount = resultSet.getInt("split_count");
-	            System.out.println("Split count: " + splitCount);
 	        }
 
 	        // Re-calculate the cost per person
@@ -716,7 +720,8 @@ public class ExpenseDAO {
 	        e.printStackTrace();
 	    }
 	}
-
+	
+	// TODO: Refactor
 	public void deleteExpense(int expenseId) {
 	    try (Connection connection = establishConnection()) {
 	        // Delete from expensePersons table
@@ -779,5 +784,9 @@ public class ExpenseDAO {
 	    } catch (SQLException e) {
 	        e.printStackTrace();
 	    }
+	}
+	
+	public void displayTransactions() {
+		// Display the following: date, establishment name, expenseid, expense name, cost, portion name, payer
 	}
 }

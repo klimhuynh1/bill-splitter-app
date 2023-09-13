@@ -15,9 +15,6 @@ public class App {
 	public static void main(String[] args) throws Exception  {
 		// Create a Scanner object to read user input
 		Scanner scanner = new Scanner(System.in);
-		
-
-		
 		boolean running = true;
 		
 		System.out.println("Welcome to the bill splitter app");
@@ -25,7 +22,8 @@ public class App {
 			System.out.println("\nPlease select an option:");
 			System.out.println("1. Add an expense");
 			System.out.println("2. Edit an expense");
-			System.out.println("3. Exit");
+			System.out.println("3. Display transactions");
+			System.out.println("4. Exit");
 			
 			String userInput = scanner.nextLine();
 			
@@ -37,6 +35,8 @@ public class App {
 					editExpense(scanner);
 					break;
 				case "3":
+//					displayTransactions(scanner);
+				case "4":
 					running = false;
 					break;
 				default:
