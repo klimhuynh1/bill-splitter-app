@@ -114,21 +114,21 @@ public class ExpenseDAO {
 	    return generatedKeys;
 	}
 
-	public int getPayerId(String personName) {
+	// TODO: Clean-up duplicate code
+	public int getPersonIdByName(String personName) {
 		int personId = -1;
 		try (Connection connection = establishConnection()) {
 	        // Get the payer_id for the 
-	        String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
+	        String selectQuery = "SELECT person_id FROM people WHERE person_name = ? LIMIT 1";
 	        PreparedStatement statement = connection.prepareStatement(selectQuery);
 	        statement.setString(1, personName);
-	        
 	        ResultSet resultSet = statement.executeQuery();
 	        if (resultSet.next()) {
 	        	personId = resultSet.getInt("person_id");
-	        	System.out.println("Payer ID: " + personId);
+	        	System.out.println("Person ID: " + personId);
 	        }
 	        else {
-	        	System.out.println("Payer Id not found");
+	        	System.out.println("Person Id not found");
 	        }
 		}
 		catch (SQLException e) {
@@ -137,9 +137,31 @@ public class ExpenseDAO {
 		return personId;
 	}
 	
+	public int getPayerIdByExpenseId(int expenseId) {
+		int payerId = -1;
+		try (Connection connection = establishConnection()) {
+	        // Get the payer_id for the 
+	        String selectQuery = "SELECT payer_id FROM expenses WHERE expense_id = ? LIMIT 1";
+	        PreparedStatement statement = connection.prepareStatement(selectQuery);
+	        statement.setInt(1, expenseId);
+	        ResultSet resultSet = statement.executeQuery();
+	        if (resultSet.next()) {
+	        	payerId = resultSet.getInt("payer_id");
+	        	System.out.println("Payer ID: " + payerId);
+	        }
+	        else {
+	        	System.out.println("Payer Id not found");
+	        }
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return payerId;
+	}
+	
 	public int insertExpenseData(Expense expense) {
 	    int generatedExpenseId = -1;
-	    int payerId = getPayerId(expense.getPayerName());
+	    int payerId = getPersonIdByName(expense.getPayerName());
 
 	    try (Connection connection = establishConnection()) {
 	        // Create the table if it doesn't exist
@@ -277,6 +299,7 @@ public class ExpenseDAO {
 		return totalAmountOwed;
 	}
 	
+	// TODO: Remove this method after ensuring nothing relies on it
 	// Generate permutations of two names
 	public List<List<String>> generateNamePermutations() {
 		List<String> names = new ArrayList<>();
@@ -388,26 +411,8 @@ public class ExpenseDAO {
 	public void removePortionName(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
 			String portionName = getValidName(scanner);
-			int personId = 0;
-			int payerId = 0;
-			
-			// Get person_id of the person you're trying to remove based off person_name input
-			String selectPersonIdQuery = "SELECT person_id FROM people WHERE person_name = ? LIMIT 1";
-			PreparedStatement personIdStatement = connection.prepareStatement(selectPersonIdQuery);
-			personIdStatement .setString(1, portionName);
-			ResultSet personIdResultSet = personIdStatement.executeQuery();
-			while (personIdResultSet.next()) {
-				personId = personIdResultSet.getInt("person_id");
-			}
-			
-			// Ensure that the portion name is not the payer
-			String selectPayerIdQuery = "SELECT payer_id FROM expenses WHERE expense_id = ? LIMIT 1";
-			PreparedStatement payerIdStatement = connection.prepareStatement(selectPayerIdQuery);
-			payerIdStatement.setInt(1, expenseId);
-			ResultSet payerIdResultSet = payerIdStatement.executeQuery(); 
-			while (payerIdResultSet.next()) {
-				payerId = payerIdResultSet.getInt("payer_id");
-			}
+			int personId = getPersonIdByName(portionName);
+			int payerId = getPayerIdByExpenseId(expenseId);
 			
 			// FIXME: temporary fix, will implement either singleton pattern and/or command pattern
 			if (personId == payerId) {
