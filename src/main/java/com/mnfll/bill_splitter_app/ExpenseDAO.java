@@ -376,28 +376,31 @@ public class ExpenseDAO {
 	
 	public void removePortionName(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
-			String portionName = getValidName(scanner);
-			int personId = getPersonIdByName(portionName);
-			int payerId = getPayerIdByExpenseId(expenseId);
+			System.out.println("Enter the portion name you would like to remove");
 			
-			// FIXME: temporary fix, will implement either singleton pattern and/or command pattern
-			if (personId == payerId) {
-				throw new IllegalArgumentException("You cannot remove portion name as they are the payer");
-			} else {
-				// Otherwise, remove record in `expensePersons` table based on person_id and expense_id
-				String deleteQuery = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
-				PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
-				deleteStatement.setInt(1, expenseId);
-				deleteStatement.setInt(2, personId);
-				deleteStatement.executeUpdate();
+			String portionName = scanner.nextLine();
+			if (InputValidator.isValidName(portionName)) {
+				int personId = getPersonIdByName(portionName);
+				int payerId = getPayerIdByExpenseId(expenseId);
 				
-				// Update split_count in `expenses` table based on expense_id
-				int splitCount = updateSplitCount(connection, expenseId, false);
-				// Re-calculate cost per portion 
-				double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
-				// Update amount_owed based on expense_id
-				updateAmountOwed(connection, expenseId, newAmountOwed);	
-				
+				// FIXME: temporary fix, will implement either singleton pattern and/or command pattern
+				if (personId == payerId) {
+					throw new IllegalArgumentException("You cannot remove portion name as they are the payer");
+				} else {
+					// Otherwise, remove record in `expensePersons` table based on person_id and expense_id
+					String deleteQuery = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
+					PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
+					deleteStatement.setInt(1, expenseId);
+					deleteStatement.setInt(2, personId);
+					deleteStatement.executeUpdate();
+					
+					// Update split_count in `expenses` table based on expense_id
+					int splitCount = updateSplitCount(connection, expenseId, false);
+					// Re-calculate cost per portion 
+					double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
+					// Update amount_owed based on expense_id
+					updateAmountOwed(connection, expenseId, newAmountOwed);		
+				}
 			}
 		} catch (SQLException e) {
             e.printStackTrace();
@@ -406,37 +409,19 @@ public class ExpenseDAO {
 	
 	public void addPortionName(int expenseId, Scanner scanner) {
 	    try (Connection connection = establishConnection()) {
-	        String newPortionName = getValidName(scanner);
-	        int personId = addNewPersonIfNotExists(connection, newPortionName);
-	        int splitCount = updateSplitCount(connection, expenseId, true);
-	        double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
-	        updateAmountOwed(connection, expenseId, newAmountOwed);
-	        addExpensePersonRecord(connection, expenseId, personId, newAmountOwed);
+	        String newPortionName = scanner.nextLine();
+	        if (InputValidator.isValidName(newPortionName)) {
+		        int personId = addNewPersonIfNotExists(connection, newPortionName);
+		        int splitCount = updateSplitCount(connection, expenseId, true);
+		        double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
+		        updateAmountOwed(connection, expenseId, newAmountOwed);
+		        addExpensePersonRecord(connection, expenseId, personId, newAmountOwed);
+	        }
 	    } catch (SQLException e) {
 	        e.printStackTrace();
 	    }
 	}
-
-	private String getValidName(Scanner scanner) {
-	    String portionName = null;
-	    boolean isValidPortionName = false;
-	    
-	    while (!isValidPortionName) {
-	        System.out.println("Enter the name");
-	        portionName = scanner.nextLine();
-	        
-	        if (InputValidator.isValidName(portionName)) {
-	            isValidPortionName = true;
-	        } else {
-	            System.out.println("Invalid portion name. Please enter a valid portion name.");
-	        }
-	    }
-	    
-	    return portionName;
-	}
 	
-	
-
 	private int addNewPersonIfNotExists(Connection connection, String portionName) throws SQLException {
 	    String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
 	    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
