@@ -330,10 +330,6 @@ public class ExpenseDAO {
 		    	addPortionName(expenseId, scanner);
 		        break;
 		    case 6:
-		    	// Find person_id of the person you're trying to remove found in `people` table
-		        // Remove record in `expensePersons` table based on person_id and expense_id
-		        // Update split_count in `expenses` table based on expense_id
-		        // Re-calculate cost per portion and update amount_owed based on expense_id
 		    	removePortionName(expenseId, scanner);
 		        break;
 		    case 7:
@@ -393,27 +389,45 @@ public class ExpenseDAO {
 		try (Connection connection = establishConnection()) {
 			String portionName = getValidName(scanner);
 			int personId = 0;
+			int payerId = 0;
 			
-			String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
-			PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
-			preparedStatement .setString(1, portionName);
-			
-			ResultSet resultSet = preparedStatement.executeQuery();
-			
-			while (resultSet.next()) {
-				personId = resultSet.getInt("person_id");
+			// Get person_id of the person you're trying to remove based off person_name input
+			String selectPersonIdQuery = "SELECT person_id FROM people WHERE person_name = ? LIMIT 1";
+			PreparedStatement personIdStatement = connection.prepareStatement(selectPersonIdQuery);
+			personIdStatement .setString(1, portionName);
+			ResultSet personIdResultSet = personIdStatement.executeQuery();
+			while (personIdResultSet.next()) {
+				personId = personIdResultSet.getInt("person_id");
 			}
 			
-			String deleteQuery = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
-			PreparedStatement preparedStatement1 = connection.prepareStatement(deleteQuery);
-			preparedStatement1.setInt(1, expenseId);
-			preparedStatement1.setInt(2, personId);
-			preparedStatement1.executeUpdate();
+			// Ensure that the portion name is not the payer
+			String selectPayerIdQuery = "SELECT payer_id FROM expenses WHERE expense_id = ? LIMIT 1";
+			PreparedStatement payerIdStatement = connection.prepareStatement(selectPayerIdQuery);
+			payerIdStatement.setInt(1, expenseId);
+			ResultSet payerIdResultSet = payerIdStatement.executeQuery(); 
+			while (payerIdResultSet.next()) {
+				payerId = payerIdResultSet.getInt("payer_id");
+			}
 			
-			int splitCount = updateSplitCount(connection, expenseId, false);
-			double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
-			updateAmountOwed(connection, expenseId, newAmountOwed);		
-			
+			// FIXME: temporary fix, will implement either singleton pattern and/or command pattern
+			if (personId == payerId) {
+				throw new IllegalArgumentException("You cannot remove portion name as they are the payer");
+			} else {
+				// Otherwise, remove record in `expensePersons` table based on person_id and expense_id
+				String deleteQuery = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
+				PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
+				deleteStatement.setInt(1, expenseId);
+				deleteStatement.setInt(2, personId);
+				deleteStatement.executeUpdate();
+				
+				// Update split_count in `expenses` table based on expense_id
+				int splitCount = updateSplitCount(connection, expenseId, false);
+				// Re-calculate cost per portion 
+				double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
+				// Update amount_owed based on expense_id
+				updateAmountOwed(connection, expenseId, newAmountOwed);	
+				
+			}
 		} catch (SQLException e) {
             e.printStackTrace();
         }
