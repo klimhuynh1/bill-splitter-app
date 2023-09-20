@@ -299,40 +299,6 @@ public class ExpenseDAO {
 		return totalAmountOwed;
 	}
 	
-	// TODO: Remove this method after ensuring nothing relies on it
-	// Generate permutations of two names
-	public List<List<String>> generateNamePermutations() {
-		List<String> names = new ArrayList<>();
-		List<List<String>> permutations = new ArrayList<>(); 
-		
-		// Retrieve a list of all the portion names
-		try(Connection connection = establishConnection()) {
-			String query = "SELECT person_name FROM people";
-			
-			Statement statement = connection.createStatement();
-			ResultSet resultSet = statement.executeQuery(query);
-			
-			while(resultSet.next()) {
-				String personName = resultSet.getString("person_name");
-				names.add(personName);
-			}			
-		}
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		
-		for (int i = 0; i < names.size(); i++) {
-			for (int j = 0; j < names.size(); j++) {
-				List<String> permutation = new ArrayList<>();
-				permutation.add(names.get(i));
-				permutation.add(names.get(j));
-				permutations.add(permutation);
-			}
-		}
-		
-	return permutations;
-	}
-	
 //	TODO: Do some testing
 	public void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
 		try (Connection connection = establishConnection()) {
