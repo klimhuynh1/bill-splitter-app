@@ -7,6 +7,7 @@ import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -47,10 +48,14 @@ public class ExpenseDAO {
         return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
 	}
 	
-	public void saveExpenseDataToDatabase(Expense expense) {
+	public void saveExpenseDataToDatabase(Expense expense) throws SQLException {
 		List<Integer> personIds = insertPeopleData(expense);
 		int expenseId = insertExpenseData(expense);
 	    insertExpensePersonsData(expense, personIds, expenseId);
+	    createJoinedPersonName();
+	    createCombinedExpensePersons();
+	    generateNamePermutations();
+	    calculateDebts();
 	}
 	
 	public List<Integer> insertPeopleData(Expense expense) {
@@ -114,7 +119,6 @@ public class ExpenseDAO {
 	    return generatedKeys;
 	}
 
-	// TODO: Clean-up duplicate code
 	public int getPersonIdByName(String personName) {
 		int personId = -1;
 		try (Connection connection = establishConnection()) {
@@ -221,17 +225,17 @@ public class ExpenseDAO {
 	    return generatedExpenseId;
 	}
 
-	
 	public void insertExpensePersonsData(Expense expense, List<Integer> personIds, int expenseId) {
 	    try (Connection connection = establishConnection()) {
 	        // Create the 'expensePersons' table if it doesn't exist
 	        String createQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
 	                "expense_id INT NOT NULL, " +
-	                "person_id INT NOT NULL, " +
+	        		"payer_id INT NOT NULL, " +
+	                "portion_id INT NOT NULL, " +
 	                "amount_owed DECIMAL(10,2) NOT NULL, " +
-	                "PRIMARY KEY (expense_id, person_id), " +
+	                "PRIMARY KEY (expense_id, portion_id), " +
 	                "FOREIGN KEY (expense_id) REFERENCES expenses(expense_id), " +
-	                "FOREIGN KEY (person_id) REFERENCES people(person_id)" +
+	                "FOREIGN KEY (portion_id) REFERENCES people(person_id)" +
 	                ")";
 
 	        Statement createTableStatement = connection.createStatement();
@@ -242,17 +246,29 @@ public class ExpenseDAO {
 	        } else {
 	            System.out.println("Failed to create table 'expensePersons'");
 	        }
-
+	        
+	        // Retrieve payer_id based on expenseId
+	        String selectQuery = "SELECT payer_id FROM expenses WHERE expense_id = ?";
+	        PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
+			preparedStatement.setInt(1, expenseId);
+			ResultSet resultSet = preparedStatement.executeQuery();
+			int payerId = 0;
+			
+			if (resultSet.next()) {
+				payerId = resultSet.getInt("payer_id"); 		
+			}
+	        	        
 	        // Prepare the insert statement
-	        String insertQuery = "INSERT INTO expensePersons (expense_id, person_id, amount_owed) " +
-	                "VALUES (?, ?, ?)";
+	        String insertQuery = "INSERT INTO expensePersons (expense_id, payer_id, portion_id, amount_owed) " +
+	                "VALUES (?, ?, ?, ?)";
 
 	        PreparedStatement insertTableStatement = connection.prepareStatement(insertQuery);
 
 	        for (Integer personId : personIds) {
 	        	insertTableStatement.setInt(1, expenseId);
-	        	insertTableStatement.setInt(2, personId);
-	        	insertTableStatement.setDouble(3, expense.getItemCost()/expense.getPortionNames().size());
+	        	insertTableStatement.setInt(2, payerId);
+	        	insertTableStatement.setInt(3, personId);
+	        	insertTableStatement.setDouble(4, expense.getItemCost()/expense.getPortionNames().size());
 
 	            int rowsInserted = insertTableStatement.executeUpdate();
 
@@ -268,38 +284,117 @@ public class ExpenseDAO {
 	    }
 	}
 	
-	public double caculateTotalAmountOwed(String fromUser, String toUser) {
-		double totalAmountOwed = 0;
-		try (Connection connection = establishConnection()) {
-			String selectQuery = "SELECT SUM(amount_owed) AS total_amount_owed " +
-                    "FROM (SELECT EP.expense_id, EP.person_id, P.person_name, EP.amount_owed, E.payer_id, E.payer_name " +
-                    "FROM expensePersons EP " +
-                    "INNER JOIN people P ON EP.person_id = P.person_id " +
-                    "INNER JOIN expenses E ON EP.expense_id = E.expense_id) AS subquery " +
-                    "WHERE person_name = ? AND payer_name = ?";
-			
-			PreparedStatement statement = connection.prepareStatement(selectQuery);
-			statement.setString(1,  fromUser);
-			statement.setString(2,  toUser);
-			
-			ResultSet resultSet = statement.executeQuery();
-			if (resultSet.next()) {
-				totalAmountOwed = resultSet.getDouble("total_amount_owed");
-			}
-			else {
-				System.out.println("Unable to calculate the total amount owed.");
-				
-			}
+	public List<List<String>> generateNamePermutations() {
+		List<String> names = new ArrayList<>();
+		List<List<String>> permutations = new ArrayList<>(); 
+
+		// Retrieve a list of all the portion names
+		try(Connection connection = establishConnection()) {
+			String query = "SELECT person_name FROM people";
+
+			Statement statement = connection.createStatement();
+			ResultSet resultSet = statement.executeQuery(query);
+
+			while(resultSet.next()) {
+				String personName = resultSet.getString("person_name");
+				names.add(personName);
+			}			
 		}
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		for (int i = 0; i < names.size(); i++) {
+			for (int j = 0; j < names.size(); j++) {
+				List<String> permutation = new ArrayList<>();
+				permutation.add(names.get(i));
+				permutation.add(names.get(j));
+				permutations.add(permutation);
+			}
+		}
 		
-		System.out.println(fromUser +  " owes " + toUser + " a total of $" + totalAmountOwed);
-		return totalAmountOwed;
+	return permutations;
 	}
 	
-//	TODO: Do some testing
+	public void createJoinedPersonName() {
+		String createViewQuery = "CREATE VIEW joinedPersonName AS "
+				+ "SELECT ep.expense_id, ep.payer_id, p.person_name AS payer_name, ep.portion_id, ep.amount_owed "
+				+ "FROM expensePersons ep "
+				+ "JOIN people p ON ep.payer_id = p.person_id" ;
+		try (Connection connection = establishConnection()) {
+			Statement statement = connection.createStatement();
+			statement.execute(createViewQuery);
+			System.out.println("View `createJoinedPersonName` created successfully.");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void createCombinedExpensePersons() {
+		String createViewQuery = "CREATE VIEW combinedExpensePersons AS "
+				+ "SELECT v.expense_id, v.payer_id, v.payer_name, v.portion_id, p.person_name AS portion_name, v.amount_owed "
+				+ "FROM joinedPersonName v "
+				+ "JOIN people p ON v.portion_id = p.person_id";
+		try (Connection connection = establishConnection()) {
+			Statement statement = connection.createStatement();
+			statement.execute(createViewQuery);
+			System.out.println("View `createCombinedExpensePersons` created successfully.");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void calculateDebts() throws SQLException {
+	    List<List<String>> nameList = generateNamePermutations();
+
+	    // Create a table joining expensePersons and people to get person_name
+	    try (Connection connection = establishConnection()) {
+	        String selectQuery = "SELECT payer_id, payer_name, portion_id, portion_name, SUM(amount_owed) AS total_amount_owed " +
+	                            "FROM combinedExpensePersons " +
+	                            "WHERE payer_name = ? AND portion_name = ? " +
+	                            "GROUP BY payer_id, payer_name, portion_id, portion_name";
+
+	        PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
+	        // Print the table headers with tabs to align
+	        ResultSetMetaData metaData = preparedStatement.getMetaData();
+	        int columnCount = metaData.getColumnCount();
+	        for (int i = 1; i <= columnCount; i++) {
+	            System.out.print(metaData.getColumnName(i));
+	            if (i < columnCount) {
+	                System.out.print("\t\t"); // Use tabs to separate headers and align columns
+	            } else {
+	                System.out.println(); // Start a new line after the last header
+	            }
+	        }
+	        
+	        for (List<String> namePair : nameList) {
+	            if (namePair.size() >= 2) {
+	                String payerName = namePair.get(0);
+	                String portionName = namePair.get(1);
+	                preparedStatement.setString(1, payerName);
+	                preparedStatement.setString(2, portionName);
+
+	                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+	                    while (resultSet.next()) {
+	                        // Print the data for each row
+	                        for (int i = 1; i <= columnCount; i++) {
+	                            System.out.print(String.format("%-12s", resultSet.getString(i)));
+	                            if (i < columnCount) {
+	                                System.out.print("\t\t"); // Use tabs to separate data and align columns
+	                            } else {
+	                                System.out.println(); // Start a new line after the last data
+	                            }
+	                        }
+	                    }
+	                }
+	            }
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	}
+	
+	//	TODO: Requires testing
 	public void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
 		try (Connection connection = establishConnection()) {
 			switch (updateOption) {
@@ -475,7 +570,7 @@ public class ExpenseDAO {
 	        return splitCount;
 	    }
 	    
-	    return -1; // Return a default value if splitCount is not found (shouldn't happen)
+	    return -1;
 	}
 
 	private double calculateNewAmountOwed(Connection connection, int expenseId, int splitCount) throws SQLException {
@@ -489,7 +584,7 @@ public class ExpenseDAO {
 	        return expenseCost / splitCount;
 	    }
 	    
-	    return -1; // Return a default value if newAmountOwed is not found (shouldn't happen)
+	    return -1;
 	}
 
 	private void updateAmountOwed(Connection connection, int expenseId, double newAmountOwed) throws SQLException {
@@ -691,6 +786,43 @@ public class ExpenseDAO {
 	    }
 	}
 	
+	
+	public void deleteOrphanUsers() {
+		try (Connection connection = establishConnection()) {
+	        // Delete from `people` table if they're not associated with any expenses
+	        String selectQuery = "SELECT person_id from people";
+	        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
+	        ResultSet resultSet = selectStatement.executeQuery();
+	        
+	        // Iterate through the result set
+	        while (resultSet.next()) {
+	        	int personId = resultSet.getInt("person_id");
+	        	
+	        	// Check if the person_id exists in the person table
+	        	String checkQuery = "SELECT COUNT(*) FROM expensePersons WHERE person_id = ?";
+	        	PreparedStatement checkStatement = connection.prepareStatement(checkQuery);
+	        	checkStatement.setInt(1, personId);
+	        	ResultSet checkResult = checkStatement.executeQuery();
+	        	checkResult.next();
+	        	
+	        	int count = checkResult.getInt(1);
+	        	
+	        	if (count == 0) {
+	        		// Delete the user from the people table
+	        		String deleteQuery = "DELETE FROM people WHERE person_id = ?";
+	        		PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
+	        		deleteStatement.setInt(1, personId);
+	        		int rowsAffected = deleteStatement.executeUpdate();
+	        		
+	        		System.out.println(rowsAffected + " rows(s) for user ID: " + personId);
+	        	}
+	        }
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+	}
+	
 	// TODO: Refactor
 	public void deleteExpense(int expenseId) {
 	    try (Connection connection = establishConnection()) {
@@ -722,34 +854,8 @@ public class ExpenseDAO {
 	            System.out.println("No rows deleted from 'expenses' table.");
 	        }
 	        
-	        // Delete from `people` table if they're not associated with any expenses
-	        String selectQuery = "SELECT person_id from people";
-	        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-	        ResultSet resultSet = selectStatement.executeQuery();
-	        
-	        // Iterate through the result set
-	        while (resultSet.next()) {
-	        	int personId = resultSet.getInt("person_id");
-	        	
-	        	// Check if the person_id exists in the person table
-	        	String checkQuery = "SELECT COUNT(*) FROM expensePersons WHERE person_id = ?";
-	        	PreparedStatement checkStatement = connection.prepareStatement(checkQuery);
-	        	checkStatement.setInt(1, personId);
-	        	ResultSet checkResult = checkStatement.executeQuery();
-	        	checkResult.next();
-	        	
-	        	int count = checkResult.getInt(1);
-	        	
-	        	if (count == 0) {
-	        		// Delete the user from the people table
-	        		String deleteQuery = "DELETE FROM people WHERE person_id = ?";
-	        		PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
-	        		deleteStatement.setInt(1, personId);
-	        		int rowsAffected = deleteStatement.executeUpdate();
-	        		
-	        		System.out.println(rowsAffected + " rows(s) for user ID: " + personId);
-	        	}
-	        }
+	        // Delete users that are no longer associated with any expenses
+	        deleteOrphanUsers();
    
 	    } catch (SQLException e) {
 	        e.printStackTrace();

@@ -47,7 +47,6 @@ public class App {
 		
 		System.out.println("Thank you for using the bill splitter app");
 		scanner.close();
-		
 	}
 	
 	public static void addExpense(Scanner scanner) throws ParseException, Exception {
