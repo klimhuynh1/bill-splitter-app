@@ -8,18 +8,18 @@ public class Expense {
 	private String establishmentName;
 	private String itemName;
 	private double itemCost;
-	private List<String> portionNames;
-	private String payerName;
+	private List<String> debtorNames;
+	private String creditorName;
 	
-	public Expense(Date date, String establishmentName, String itemName, double itemCost, List<String> portionNames,
-			String payerName) {
+	public Expense(Date date, String establishmentName, String itemName, double itemCost, List<String> debtorNames,
+			String creditorName) {
 		super();
 		this.date = date;
 		this.establishmentName = establishmentName;
 		this.itemName = itemName;
 		this.itemCost = itemCost;
-		this.portionNames = portionNames;
-		this.payerName = payerName;
+		this.debtorNames = debtorNames;
+		this.creditorName = creditorName;
 	}
 
 	public Date getDate() {
@@ -46,14 +46,14 @@ public class Expense {
 
 
 
-	public List<String> getPortionNames() {
-		return portionNames;
+	public List<String> getDebtorNames() {
+		return debtorNames;
 	}
 
 
 
-	public String getPayerName() {
-		return payerName;
+	public String getCreditorName() {
+		return creditorName;
 	}
 
 	public void displayExpense() {
@@ -61,8 +61,8 @@ public class Expense {
 		System.out.println("Establishment: " + getEstablishmentName());
 		System.out.println("Item: " + getItemName());
 		System.out.println("Cost: " + getItemCost());
-		System.out.println("Portion Names " + getPortionNames());
-		System.out.println("Payer Name: " + getPayerName());
+		System.out.println("Portion Names " + getDebtorNames());
+		System.out.println("Payer Name: " + getCreditorName());
 		System.out.println("---------------------------");
 	}
 }

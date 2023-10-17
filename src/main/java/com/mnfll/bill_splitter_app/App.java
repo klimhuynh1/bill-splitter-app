@@ -62,13 +62,13 @@ public class App {
 			String establishmentName = null;
 			String expenseName = null;
 			double expenseCost = 0;
-			int portionNumber = 0;
-			List<String> portionNames = new ArrayList<>();
+			int debtorNumber = 0;
+			List<String> debtorNames = new ArrayList<>();
 			boolean isValidDate = false;
 			boolean isValidEstablishmentName = false;
 			boolean isValidExpenseName = false;
 			boolean isValidExpenseCost = false;
-			boolean isValidPortionNumber = false;
+			boolean isValidDebtorNumber = false;
 			boolean isValidName = false;
 			
 			while (!isValidDate) {
@@ -121,13 +121,13 @@ public class App {
 				}
 			}
 			
-			while(!isValidPortionNumber) {
+			while(!isValidDebtorNumber) {
 				System.out.print("How many people are shared this item?");
 				String userInput = scanner.nextLine();
 				
 				if (InputValidator.isValidInteger(userInput)) {
-					portionNumber = Integer.parseInt(userInput);
-					isValidPortionNumber = true;
+					debtorNumber = Integer.parseInt(userInput);
+					isValidDebtorNumber = true;
 				}
 				else {
 					System.out.print("Invalid expense cost. Please enter a valid expense cost. ");
@@ -135,32 +135,32 @@ public class App {
 			}
 			
 			String name;
-			for (int i = 0; i < portionNumber; i++) {
+			for (int i = 0; i < debtorNumber; i++) {
 				isValidName = false;
 				
 				while(!isValidName) {
-					System.out.print("Enter portion name " + (i+1) + " ");
+					System.out.print("Enter debtor name " + (i+1) + " ");
 					name = scanner.nextLine();
 					
 					if (InputValidator.isValidName(name)) {
-						portionNames.add(name);
+						debtorNames.add(name);
 						System.out.println(name + " has been added");
 						isValidName  = true;
 					}
 					else {
-						System.out.print("Invalid portion name. Please enter a valid portion name. ");
+						System.out.print("Invalid debtor name. Please enter a valid debtor name. ");
 					}
 				}
 			}
 			
 			System.out.println("Who paid for the item? ");
-			for (int i = 0; i < portionNames.size(); i++) {
-				System.out.println((i+1) + ". " + portionNames.get(i));
+			for (int i = 0; i < debtorNames.size(); i++) {
+				System.out.println((i+1) + ". " + debtorNames.get(i));
 			}
-			int payerNameIndex = Integer.parseInt(scanner.nextLine());
-			String payerName = portionNames.get(payerNameIndex - 1);
+			int creditorNameIndex = Integer.parseInt(scanner.nextLine());
+			String creditorName = debtorNames.get(creditorNameIndex - 1);
 			
-			Expense expense = new Expense(date, establishmentName, expenseName, expenseCost, portionNames, payerName);
+			Expense expense = new Expense(date, establishmentName, expenseName, expenseCost, debtorNames, creditorName);
 			expenses.add(expense);
 			
 			
@@ -188,9 +188,9 @@ public class App {
 		System.out.println("2. Update establishment name");
 		System.out.println("3. Update expense name");
 		System.out.println("4. Update expense cost");
-		System.out.println("5. Add portion name");
-		System.out.println("6. Remove portion name");
-		System.out.println("7. Update payer name");
+		System.out.println("5. Add debtor name");
+		System.out.println("6. Remove debtor name");
+		System.out.println("7. Update creditor name");
 		System.out.println("8. Delete expense");
 		int updateOption = Integer.parseInt(scanner.nextLine());
 		

@@ -11,7 +11,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.text.ParseException;
@@ -49,13 +51,14 @@ public class ExpenseDAO {
 	}
 	
 	public void saveExpenseDataToDatabase(Expense expense) throws SQLException {
-		List<Integer> personIds = insertPeopleData(expense);
-		int expenseId = insertExpenseData(expense);
-	    insertExpensePersonsData(expense, personIds, expenseId);
-	    createJoinedPersonName();
-	    createCombinedExpensePersons();
-	    generateNamePermutations();
-	    calculateDebts();
+//		List<Integer> personIds = insertPeopleData(expense);
+//		int expenseId = insertExpenseData(expense);
+//	    insertExpensePersonsData(expense, personIds, expenseId);
+//	    createCombinedExpensePersons();
+	    List<DebtRecord> debtRecords = calculateDebt();
+	    List<String> peopleNames = getAllPeopleNames();
+	    double[][] debtMatrix = createDebtMatrix(debtRecords, peopleNames);
+	    calculateNetDebts(debtMatrix, peopleNames);
 	}
 	
 	public List<Integer> insertPeopleData(Expense expense) {
@@ -83,10 +86,10 @@ public class ExpenseDAO {
 	        // Prepare the insert statement to add new records to the `people` table
 	        String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
 
-	        for (String portionName : expense.getPortionNames()) {
+	        for (String debtorName : expense.getDebtorNames()) {
 	        	// Check if the name already exists
 	        	PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-	        	selectStatement.setString(1, portionName);
+	        	selectStatement.setString(1, debtorName);
 	        	ResultSet selectResultSet = selectStatement.executeQuery();
 	        	
 	        	if (selectResultSet.next()) {
@@ -96,7 +99,7 @@ public class ExpenseDAO {
 	        	else {
 	        		// Name doesn't exist, insert a new record
 		            PreparedStatement statement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
-		            statement.setString(1, portionName);
+		            statement.setString(1, debtorName);
 
 		            int rowsInserted = statement.executeUpdate();
 		            if (rowsInserted > 0) {
@@ -122,7 +125,7 @@ public class ExpenseDAO {
 	public int getPersonIdByName(String personName) {
 		int personId = -1;
 		try (Connection connection = establishConnection()) {
-	        // Get the payer_id for the 
+	        // Get the creditor_id for the 
 	        String selectQuery = "SELECT person_id FROM people WHERE person_name = ? LIMIT 1";
 	        PreparedStatement statement = connection.prepareStatement(selectQuery);
 	        statement.setString(1, personName);
@@ -141,31 +144,31 @@ public class ExpenseDAO {
 		return personId;
 	}
 	
-	public int getPayerIdByExpenseId(int expenseId) {
-		int payerId = -1;
+	public int getcreditorIdByExpenseId(int expenseId) {
+		int creditorId = -1;
 		try (Connection connection = establishConnection()) {
-	        // Get the payer_id for the 
-	        String selectQuery = "SELECT payer_id FROM expenses WHERE expense_id = ? LIMIT 1";
+	        // Get the creditor_id for the 
+	        String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ? LIMIT 1";
 	        PreparedStatement statement = connection.prepareStatement(selectQuery);
 	        statement.setInt(1, expenseId);
 	        ResultSet resultSet = statement.executeQuery();
 	        if (resultSet.next()) {
-	        	payerId = resultSet.getInt("payer_id");
-	        	System.out.println("Payer ID: " + payerId);
+	        	creditorId = resultSet.getInt("creditor_id");
+	        	System.out.println("creditor ID: " + creditorId);
 	        }
 	        else {
-	        	System.out.println("Payer Id not found");
+	        	System.out.println("creditor Id not found");
 	        }
 		}
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return payerId;
+		return creditorId;
 	}
 	
 	public int insertExpenseData(Expense expense) {
 	    int generatedExpenseId = -1;
-	    int payerId = getPersonIdByName(expense.getPayerName());
+	    int creditorId = getPersonIdByName(expense.getCreditorName());
 
 	    try (Connection connection = establishConnection()) {
 	        // Create the table if it doesn't exist
@@ -176,8 +179,8 @@ public class ExpenseDAO {
 	                "establishment_name VARCHAR(255) NOT NULL, " +
 	                "total_cost DECIMAL(10,2) NOT NULL, " +
 	                "split_count INT NOT NULL, " +
-	                "payer_id INT NOT NULL," +
-	                "payer_name VARCHAR(255) NOT NULL" +
+	                "creditor_id INT NOT NULL," +
+	                "creditor_name VARCHAR(255) NOT NULL" +
 	                ")";
 
 	        Statement createTableStatement = connection.createStatement();
@@ -190,7 +193,7 @@ public class ExpenseDAO {
 	        }
 	        
 	        // Prepare the insert statement
-	        String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, split_count, payer_id, payer_name) " +
+	        String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, split_count, creditor_id, creditor_name) " +
 	                "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
 	        // Convert java.util.Date to java.sql.Date
@@ -201,9 +204,9 @@ public class ExpenseDAO {
 	        statement.setString(2, expense.getItemName());
 	        statement.setString(3, expense.getEstablishmentName());
 	        statement.setDouble(4, expense.getItemCost());
-	        statement.setInt(5, expense.getPortionNames().size());
-	        statement.setInt(6, payerId);
-	        statement.setString(7, expense.getPayerName());
+	        statement.setInt(5, expense.getDebtorNames().size());
+	        statement.setInt(6, creditorId);
+	        statement.setString(7, expense.getCreditorName());
 
 	        int rowsInserted = statement.executeUpdate();
 
@@ -228,15 +231,17 @@ public class ExpenseDAO {
 	public void insertExpensePersonsData(Expense expense, List<Integer> personIds, int expenseId) {
 	    try (Connection connection = establishConnection()) {
 	        // Create the 'expensePersons' table if it doesn't exist
-	        String createQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
-	                "expense_id INT NOT NULL, " +
-	        		"payer_id INT NOT NULL, " +
-	                "portion_id INT NOT NULL, " +
-	                "amount_owed DECIMAL(10,2) NOT NULL, " +
-	                "PRIMARY KEY (expense_id, portion_id), " +
-	                "FOREIGN KEY (expense_id) REFERENCES expenses(expense_id), " +
-	                "FOREIGN KEY (portion_id) REFERENCES people(person_id)" +
-	                ")";
+	    	String createQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
+	    	        "expense_id INT NOT NULL, " +
+	    	        "creditor_id INT NOT NULL, " +
+	    	        "debtor_id INT NOT NULL, " +
+	    	        "amount_owed DECIMAL(10,2) NOT NULL, " +
+	    	        "is_paid CHAR(1) DEFAULT 'n' CHECK (is_paid IN ('y', 'n')), " +
+	    	        "PRIMARY KEY (expense_id, debtor_id), " +
+	    	        "FOREIGN KEY (expense_id) REFERENCES expenses(expense_id), " +
+	    	        "FOREIGN KEY (debtor_id) REFERENCES people(person_id)" +
+	    	        ")";
+
 
 	        Statement createTableStatement = connection.createStatement();
 	        int tableCreated = createTableStatement.executeUpdate(createQuery);
@@ -247,28 +252,28 @@ public class ExpenseDAO {
 	            System.out.println("Failed to create table 'expensePersons'");
 	        }
 	        
-	        // Retrieve payer_id based on expenseId
-	        String selectQuery = "SELECT payer_id FROM expenses WHERE expense_id = ?";
+	        // Retrieve creditor_id based on expenseId
+	        String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ?";
 	        PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
 			preparedStatement.setInt(1, expenseId);
 			ResultSet resultSet = preparedStatement.executeQuery();
-			int payerId = 0;
+			int creditorId = 0;
 			
 			if (resultSet.next()) {
-				payerId = resultSet.getInt("payer_id"); 		
+				creditorId = resultSet.getInt("creditor_id"); 		
 			}
 	        	        
 	        // Prepare the insert statement
-	        String insertQuery = "INSERT INTO expensePersons (expense_id, payer_id, portion_id, amount_owed) " +
+	        String insertQuery = "INSERT INTO expensePersons (expense_id, creditor_id, debtor_id, amount_owed) " +
 	                "VALUES (?, ?, ?, ?)";
 
 	        PreparedStatement insertTableStatement = connection.prepareStatement(insertQuery);
 
 	        for (Integer personId : personIds) {
 	        	insertTableStatement.setInt(1, expenseId);
-	        	insertTableStatement.setInt(2, payerId);
+	        	insertTableStatement.setInt(2, creditorId);
 	        	insertTableStatement.setInt(3, personId);
-	        	insertTableStatement.setDouble(4, expense.getItemCost()/expense.getPortionNames().size());
+	        	insertTableStatement.setDouble(4, expense.getItemCost()/expense.getDebtorNames().size());
 
 	            int rowsInserted = insertTableStatement.executeUpdate();
 
@@ -284,113 +289,135 @@ public class ExpenseDAO {
 	    }
 	}
 	
-	public List<List<String>> generateNamePermutations() {
-		List<String> names = new ArrayList<>();
-		List<List<String>> permutations = new ArrayList<>(); 
-
-		// Retrieve a list of all the portion names
-		try(Connection connection = establishConnection()) {
-			String query = "SELECT person_name FROM people";
-
-			Statement statement = connection.createStatement();
-			ResultSet resultSet = statement.executeQuery(query);
-
-			while(resultSet.next()) {
-				String personName = resultSet.getString("person_name");
-				names.add(personName);
-			}			
-		}
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		for (int i = 0; i < names.size(); i++) {
-			for (int j = 0; j < names.size(); j++) {
-				List<String> permutation = new ArrayList<>();
-				permutation.add(names.get(i));
-				permutation.add(names.get(j));
-				permutations.add(permutation);
-			}
-		}
-		
-	return permutations;
-	}
-	
-	public void createJoinedPersonName() {
-		String createViewQuery = "CREATE VIEW joinedPersonName AS "
-				+ "SELECT ep.expense_id, ep.payer_id, p.person_name AS payer_name, ep.portion_id, ep.amount_owed "
-				+ "FROM expensePersons ep "
-				+ "JOIN people p ON ep.payer_id = p.person_id" ;
-		try (Connection connection = establishConnection()) {
-			Statement statement = connection.createStatement();
-			statement.execute(createViewQuery);
-			System.out.println("View `createJoinedPersonName` created successfully.");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-	
 	public void createCombinedExpensePersons() {
-		String createViewQuery = "CREATE VIEW combinedExpensePersons AS "
-				+ "SELECT v.expense_id, v.payer_id, v.payer_name, v.portion_id, p.person_name AS portion_name, v.amount_owed "
-				+ "FROM joinedPersonName v "
-				+ "JOIN people p ON v.portion_id = p.person_id";
-		try (Connection connection = establishConnection()) {
-			Statement statement = connection.createStatement();
-			statement.execute(createViewQuery);
-			System.out.println("View `createCombinedExpensePersons` created successfully.");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	    String createViewQuery = "CREATE VIEW combinedExpensePersons AS " +
+	            "SELECT ep.expense_id, ep.creditor_id, p1.person_name AS creditor_name, " +
+	            "ep.debtor_id, p2.person_name AS debtor_name, ep.amount_owed " +
+	            "FROM expensePersons ep " +
+	            "JOIN people p1 ON ep.creditor_id = p1.person_id " +
+	            "JOIN people p2 ON ep.debtor_id = p2.person_id";
+	    
+	    try (Connection connection = establishConnection()) {
+	        Statement statement = connection.createStatement();
+	        statement.execute(createViewQuery);
+	        System.out.println("View `createCombinedExpensePersons` created successfully.");
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
 	}
 	
-	public void calculateDebts() throws SQLException {
-	    List<List<String>> nameList = generateNamePermutations();
+	public List<DebtRecord> calculateDebt() throws SQLException {
+	    List<DebtRecord> debtRecords = new ArrayList<>();
 
-	    // Create a table joining expensePersons and people to get person_name
 	    try (Connection connection = establishConnection()) {
-	        String selectQuery = "SELECT payer_id, payer_name, portion_id, portion_name, SUM(amount_owed) AS total_amount_owed " +
+	        String selectQuery = "SELECT creditor_name, debtor_name, SUM(amount_owed) AS total_amount_owed " +
 	                            "FROM combinedExpensePersons " +
-	                            "WHERE payer_name = ? AND portion_name = ? " +
-	                            "GROUP BY payer_id, payer_name, portion_id, portion_name";
+	                            "WHERE creditor_name <> debtor_name " +
+	                            "GROUP BY creditor_name, debtor_name";
 
 	        PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
-	        // Print the table headers with tabs to align
-	        ResultSetMetaData metaData = preparedStatement.getMetaData();
-	        int columnCount = metaData.getColumnCount();
-	        for (int i = 1; i <= columnCount; i++) {
-	            System.out.print(metaData.getColumnName(i));
-	            if (i < columnCount) {
-	                System.out.print("\t\t"); // Use tabs to separate headers and align columns
-	            } else {
-	                System.out.println(); // Start a new line after the last header
-	            }
-	        }
-	        
-	        for (List<String> namePair : nameList) {
-	            if (namePair.size() >= 2) {
-	                String payerName = namePair.get(0);
-	                String portionName = namePair.get(1);
-	                preparedStatement.setString(1, payerName);
-	                preparedStatement.setString(2, portionName);
 
-	                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-	                    while (resultSet.next()) {
-	                        // Print the data for each row
-	                        for (int i = 1; i <= columnCount; i++) {
-	                            System.out.print(String.format("%-12s", resultSet.getString(i)));
-	                            if (i < columnCount) {
-	                                System.out.print("\t\t"); // Use tabs to separate data and align columns
-	                            } else {
-	                                System.out.println(); // Start a new line after the last data
-	                            }
-	                        }
-	                    }
-	                }
+	        try (ResultSet resultSet = preparedStatement.executeQuery()) {
+	            while (resultSet.next()) {
+	                String creditorName = resultSet.getString("creditor_name");
+	                String debtorName = resultSet.getString("debtor_name");
+	                double totalAmountOwed = resultSet.getDouble("total_amount_owed");
+
+	                // Create a DebtRecord and add it to the list
+	                DebtRecord debtRecord = new DebtRecord(creditorName, debtorName, totalAmountOwed);
+	                debtRecords.add(debtRecord);
 	            }
 	        }
 	    } catch (SQLException e) {
 	        e.printStackTrace();
+	    }
+	    return debtRecords;
+	}
+	
+	public List<String> getAllPeopleNames() {
+	    List<String> peopleNames = new ArrayList<>();
+
+	    try (Connection connection = establishConnection()) {
+	        String query = "SELECT person_name FROM people";
+
+	        try (Statement statement = connection.createStatement();
+	             ResultSet resultSet = statement.executeQuery(query)) {
+
+	            while (resultSet.next()) {
+	                String personName = resultSet.getString("person_name");
+	                peopleNames.add(personName);
+	            }
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+
+	    return peopleNames;
+	}
+	
+	public double[][] createDebtMatrix(List<DebtRecord> debtRecords, List<String> peopleNames) {
+	    int n = peopleNames.size();
+	    double[][] debtMatrix = new double[n][n];
+
+	    // Initialize the debt matrix with zeros
+	    for (int i = 0; i < n; i++) {
+	        for (int j = 0; j < n; j++) {
+	        	// Transpose the matrix
+	            debtMatrix[j][i] = 0.0;
+	        }
+	    }
+
+	    // Fill the debt matrix with debt data from debtRecords
+	    for (DebtRecord debtRecord : debtRecords) {
+	        String creditorName = debtRecord.getCreditor();
+	        String debtorName = debtRecord.getDebtor();
+	        double amountOwed = debtRecord.getAmountOwed();
+
+	        int creditorIndex = peopleNames.indexOf(creditorName);
+	        int debtorIndex = peopleNames.indexOf(debtorName);
+
+	        // Update the debt matrix with the amount owed
+	        debtMatrix[creditorIndex][debtorIndex] = amountOwed;
+	    }
+
+	    return debtMatrix;
+	}
+	
+	public void displayDebtMatrix(double[][] debtMatrix, List<String> peopleNames) {
+	    int n = peopleNames.size();
+
+	    System.out.println("Debt Matrix:");
+
+	    // Print the column headers (people names)
+	    System.out.print("         ");  // Indent for row labels
+	    for (String personName : peopleNames) {
+	        System.out.printf("%10s", personName);
+	    }
+	    System.out.println();
+
+	    // Print the matrix rows
+	    for (int i = 0; i < n; i++) {
+	        System.out.printf("%10s", peopleNames.get(i));  // Row label (person name)
+	        for (int j = 0; j < n; j++) {
+	            System.out.printf("%10.2f", debtMatrix[j][i]);
+	        }
+	        System.out.println();
+	    }
+	}
+	
+	public void calculateNetDebts(double[][] debtMatrix, List<String> names) {
+	    int n = names.size();
+
+	    // Calculate and display net debts
+	    for (int i = 0; i < n; i++) {
+	        for (int j = i + 1; j < n; j++) {
+	            double netDebt = debtMatrix[i][j] - debtMatrix[j][i];
+	            if (netDebt > 0) {
+	                System.out.println(names.get(j) + " owes " + names.get(i) + " " + netDebt);
+	            } else if (netDebt < 0) {
+	                System.out.println(names.get(i) + " owes " + names.get(j) + " " + -netDebt);
+	            }
+	        }
 	    }
 	}
 	
@@ -411,14 +438,14 @@ public class ExpenseDAO {
 		    	updateExpenseCost(expenseId, scanner);
 		        break;
 		    case 5:
-		    	addPortionName(expenseId, scanner);
+		    	addDebtorName(expenseId, scanner);
 		        break;
 		    case 6:
-		    	removePortionName(expenseId, scanner);
+		    	removedebtorName(expenseId, scanner);
 		        break;
 		    case 7:
-		        // Edit payer_name in `expense` table based on expense_id
-		    	updatePayerName(expenseId, scanner);
+		        // Edit creditor_name in `expense` table based on expense_id
+		    	updatecreditorName(expenseId, scanner);
 		        break;
 		    case 8:
 		        deleteExpense(expenseId);
@@ -432,18 +459,18 @@ public class ExpenseDAO {
 		}
 	}
 	
-	// TODO: Update both payer_id and payer_name
+	// TODO: Update both creditor_id and creditor_name
 	// TODO: Create a new entry for people table if they don't exist
-	public void updatePayerName(int expenseId, Scanner scanner) {
+	public void updatecreditorName(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
 			boolean isValidName = false;
-			String newPayerName = "";
+			String newcreditorName = "";
 			
 			while (!isValidName) {
-				System.out.println("Enter a new payer name");
-				newPayerName = scanner.nextLine();
+				System.out.println("Enter a new creditor name");
+				newcreditorName = scanner.nextLine();
 				
-				if (InputValidator.isValidName(newPayerName)) {
+				if (InputValidator.isValidName(newcreditorName)) {
 					isValidName = true;
 				}
 				else {
@@ -451,9 +478,9 @@ public class ExpenseDAO {
 				}					
 			}
 			
-			String updateStatement = "UPDATE expenses SET payer_name = ? WHERE expense_id = ?";
+			String updateStatement = "UPDATE expenses SET creditor_name = ? WHERE expense_id = ?";
 			PreparedStatement preparedStatement = connection.prepareStatement(updateStatement);
-			preparedStatement.setString(1, newPayerName);
+			preparedStatement.setString(1, newcreditorName);
 			preparedStatement.setInt(2, expenseId);
 			
 			int rowsAffected = preparedStatement.executeUpdate();
@@ -469,18 +496,18 @@ public class ExpenseDAO {
 		}		
 	}
 	
-	public void removePortionName(int expenseId, Scanner scanner) {
+	public void removedebtorName(int expenseId, Scanner scanner) {
 		try (Connection connection = establishConnection()) {
-			System.out.println("Enter the portion name you would like to remove");
+			System.out.println("Enter the debtor name you would like to remove");
 			
-			String portionName = scanner.nextLine();
-			if (InputValidator.isValidName(portionName)) {
-				int personId = getPersonIdByName(portionName);
-				int payerId = getPayerIdByExpenseId(expenseId);
+			String debtorName = scanner.nextLine();
+			if (InputValidator.isValidName(debtorName)) {
+				int personId = getPersonIdByName(debtorName);
+				int creditorId = getcreditorIdByExpenseId(expenseId);
 				
 				// FIXME: temporary fix, will implement either singleton pattern and/or command pattern
-				if (personId == payerId) {
-					throw new IllegalArgumentException("You cannot remove portion name as they are the payer");
+				if (personId == creditorId) {
+					throw new IllegalArgumentException("You cannot remove debtor name as they are the creditor");
 				} else {
 					// Otherwise, remove record in `expensePersons` table based on person_id and expense_id
 					String deleteQuery = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
@@ -491,7 +518,7 @@ public class ExpenseDAO {
 					
 					// Update split_count in `expenses` table based on expense_id
 					int splitCount = updateSplitCount(connection, expenseId, false);
-					// Re-calculate cost per portion 
+					// Re-calculate cost per debtor 
 					double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
 					// Update amount_owed based on expense_id
 					updateAmountOwed(connection, expenseId, newAmountOwed);		
@@ -502,11 +529,11 @@ public class ExpenseDAO {
         }
 	}
 	
-	public void addPortionName(int expenseId, Scanner scanner) {
+	public void addDebtorName(int expenseId, Scanner scanner) {
 	    try (Connection connection = establishConnection()) {
-	        String newPortionName = scanner.nextLine();
-	        if (InputValidator.isValidName(newPortionName)) {
-		        int personId = addNewPersonIfNotExists(connection, newPortionName);
+	        String newdebtorName = scanner.nextLine();
+	        if (InputValidator.isValidName(newdebtorName)) {
+		        int personId = addNewPersonIfNotExists(connection, newdebtorName);
 		        int splitCount = updateSplitCount(connection, expenseId, true);
 		        double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
 		        updateAmountOwed(connection, expenseId, newAmountOwed);
@@ -517,10 +544,10 @@ public class ExpenseDAO {
 	    }
 	}
 	
-	private int addNewPersonIfNotExists(Connection connection, String portionName) throws SQLException {
+	private int addNewPersonIfNotExists(Connection connection, String debtorName) throws SQLException {
 	    String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
 	    PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-	    selectStatement.setString(1, portionName);
+	    selectStatement.setString(1, debtorName);
 	    ResultSet selectResultSet = selectStatement.executeQuery();
 	    
 	    if (selectResultSet.next()) {
@@ -530,7 +557,7 @@ public class ExpenseDAO {
 	        // Person does not exist, create a new record
 	        String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
 	        PreparedStatement insertStatement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
-	        insertStatement.setString(1, portionName);
+	        insertStatement.setString(1, debtorName);
 	        insertStatement.executeUpdate();
 	        
 	        // Retrieve the generated person_id
@@ -605,7 +632,7 @@ public class ExpenseDAO {
 	    statement.setDouble(3, newAmountOwed);
 	    
 	    int rowsAffected = statement.executeUpdate();
-	    System.out.println("Add row for new portion name -- Rows affected: " + rowsAffected);
+	    System.out.println("Add row for new debtor name -- Rows affected: " + rowsAffected);
 	}
 
 	public void updateExpenseDate(int expenseId, Scanner scanner) {
@@ -862,7 +889,8 @@ public class ExpenseDAO {
 	    }
 	}
 	
+	// TODO: Complete later
 	public void displayTransactions() {
-		// Display the following: date, establishment name, expenseid, expense name, cost, portion name, payer
+		// Display the following: date, establishment name, expenseid, expense name, cost, debtor name, creditor
 	}
 }

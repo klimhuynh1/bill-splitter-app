@@ -34,4 +34,13 @@ public class DebtRecord {
 	public void setAmountOwed(double amountOwed) {
 		this.amountOwed = amountOwed;
 	}
+	
+	
+	
+	@Override
+	public String toString() {
+		// Create a report for this DebtRecord
+		return debtor + " owes " + creditor + " $" + amountOwed;
+	}
+	
 }
