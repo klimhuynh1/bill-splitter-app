@@ -4,12 +4,12 @@ import java.util.Date;
 import java.util.List;
 
 public class Expense {
-	private Date date;
-	private String establishmentName;
-	private String itemName;
-	private double itemCost;
-	private List<String> debtorNames;
-	private String creditorName;
+	private final Date date;
+	private final String establishmentName;
+	private final String itemName;
+	private final double itemCost;
+	private final List<String> debtorNames;
+	private final String creditorName;
 	
 	public Expense(Date date, String establishmentName, String itemName, double itemCost, List<String> debtorNames,
 			String creditorName) {
@@ -61,8 +61,8 @@ public class Expense {
 		System.out.println("Establishment: " + getEstablishmentName());
 		System.out.println("Item: " + getItemName());
 		System.out.println("Cost: " + getItemCost());
-		System.out.println("Portion Names " + getDebtorNames());
-		System.out.println("Payer Name: " + getCreditorName());
+		System.out.println("Debtor Names " + getDebtorNames());
+		System.out.println("Creditor Name: " + getCreditorName());
 		System.out.println("---------------------------");
 	}
 }

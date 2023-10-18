@@ -71,9 +71,9 @@ public class InputValidator {
 	}
 	
 	public static String sanitizeInput(String input) {
-		if (!(input == null && input.isBlank())) {
-			return input.trim();
+		if (input == null) {
+			return "";
 		}
-		return "";
+		return input.trim();
 	}
 }
