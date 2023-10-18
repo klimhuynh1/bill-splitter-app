@@ -13,32 +13,16 @@ import java.util.*;
  * delegates tasks to the specialised class.
  */
 public class ExpenseDAO {
-
     public List<Integer> insertPeopleData(Expense expense) {
         List<Integer> generatedKeys = new ArrayList<>();
         Connection connection = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Create the 'people' table if it doesn't exist
-            String createTableQuery = "CREATE TABLE IF NOT EXISTS people (" +
-                    "person_id INT AUTO_INCREMENT PRIMARY KEY, " +
-                    "person_name VARCHAR(255)" +
-                    ")";
-
-            Statement createTableStatement = connection.createStatement();
-            int tableCreated = createTableStatement.executeUpdate(createTableQuery);
-
-            if (tableCreated >= 0) {
-                System.out.println("Table `people` created successfully");
-            } else {
-                System.out.println("Failed to create table `people`");
-            }
-
-            // Prepare the select statement to check if the name already exists
+            // Check if the name already exists
             String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
 
-            // Prepare the insert statement to add new records to the `people` table
+            // Add new records to the `people` table
             String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
 
             for (String debtorName : expense.getDebtorNames()) {
@@ -70,8 +54,8 @@ public class ExpenseDAO {
 
                 }
             }
-
-        } catch (SQLException e) {
+        } catch (
+                SQLException e) {
             e.printStackTrace();
         } finally {
             DatabaseConnectionManager.closeConnection(connection);
@@ -87,27 +71,6 @@ public class ExpenseDAO {
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Create the table if it doesn't exist
-            String createTableQuery = "CREATE TABLE IF NOT EXISTS expenses (" +
-                    "expense_id INT AUTO_INCREMENT PRIMARY KEY, " +
-                    "expense_date DATE NOT NULL, " +
-                    "establishment_name VARCHAR(255) NOT NULL, " +
-                    "expense_name VARCHAR(255) NOT NULL, " +
-                    "total_cost DECIMAL(10,2) NOT NULL, " +
-                    "split_count INT NOT NULL, " +
-                    "creditor_id INT NOT NULL," +
-                    "creditor_name VARCHAR(255) NOT NULL" +
-                    ")";
-
-            Statement createTableStatement = connection.createStatement();
-            int tableCreated = createTableStatement.executeUpdate(createTableQuery);
-
-            if (tableCreated >= 0) {
-                System.out.println("Table 'expenses' created successfully");
-            } else {
-                System.out.println("Failed to create table 'expenses'");
-            }
-
             // Prepare the insert statement
             String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, " +
                     "split_count, creditor_id, creditor_name) " +
@@ -149,29 +112,9 @@ public class ExpenseDAO {
 
     public void insertExpensePersonsData(Expense expense, List<Integer> personIds, int expenseId) {
         Connection connection = null;
+
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Create the 'expensePersons' table if it doesn't exist
-            String createQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
-                    "expense_id INT NOT NULL, " +
-                    "creditor_id INT NOT NULL, " +
-                    "debtor_id INT NOT NULL, " +
-                    "amount_owed DECIMAL(10,2) NOT NULL, " +
-                    "payment_status CHAR(1) DEFAULT 'n' CHECK (payment_status IN ('y', 'n')), " +
-                    "PRIMARY KEY (expense_id, debtor_id), " +
-                    "FOREIGN KEY (expense_id) REFERENCES expenses(expense_id), " +
-                    "FOREIGN KEY (debtor_id) REFERENCES people(person_id)" +
-                    ")";
-
-            Statement createTableStatement = connection.createStatement();
-            int tableCreated = createTableStatement.executeUpdate(createQuery);
-
-            if (tableCreated >= 0) {
-                System.out.println("Table 'expensePersons' created successfully");
-            } else {
-                System.out.println("Failed to create table 'expensePersons'");
-            }
-
             // Retrieve creditor_id based on expenseId
             String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ?";
             PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
@@ -193,7 +136,7 @@ public class ExpenseDAO {
                 insertTableStatement.setInt(1, expenseId);
                 insertTableStatement.setInt(2, creditorId);
                 insertTableStatement.setInt(3, personId);
-                insertTableStatement.setDouble(4, expense.getItemCost()/expense.getDebtorNames().size());
+                insertTableStatement.setDouble(4, expense.getItemCost() / expense.getDebtorNames().size());
 
                 int rowsInserted = insertTableStatement.executeUpdate();
 
@@ -212,6 +155,11 @@ public class ExpenseDAO {
     }
 
     public void saveExpenseDataToDatabase(Expense expense) {
+        TableCreationManager tableCreationManager = new TableCreationManager();
+        tableCreationManager.createPeopleTable();
+        tableCreationManager.createExpensesTable();
+        tableCreationManager.createExpensePersonsTable();
+
         List<Integer> personIds = insertPeopleData(expense);
         int expenseId = insertExpenseData(expense);
         insertExpensePersonsData(expense, personIds, expenseId);
@@ -252,7 +200,7 @@ public class ExpenseDAO {
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
                 personId = resultSet.getInt("person_id");
-                System.out.println("Person ID: " + personId);
+//                System.out.println("Person ID: " + personId);
             } else {
                 System.out.println("Person Id not found");
             }
