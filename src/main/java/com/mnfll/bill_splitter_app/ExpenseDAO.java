@@ -1,52 +1,25 @@
 package com.mnfll.bill_splitter_app;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.*;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-
 import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
+import java.sql.Date;
+import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+/**
+ * Coordinate and utilise the other managers. This class remains the entry point for interacting with the data layer but
+ * delegates tasks to the specialised class.
+ */
 public class ExpenseDAO {
-    private static final String CONFIG_FILE_PATH = System.getProperty("user.dir") + "\\config.properties";
-    private static final String DB_URL_KEY = "db.url";
-    private static final String DB_USERNAME_KEY = "db.username";
-    private static final String DB_PASSWORD_KEY = "db.password";
-
-    private Properties loadConfig() {
-        Properties config = new Properties();
-        try (FileInputStream fis = new FileInputStream(CONFIG_FILE_PATH)) {
-            config.load(fis);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return config;
-    }
-
-    public Connection establishConnection() throws SQLException {
-        // Load the configuration from the properties file
-        Properties config = loadConfig();
-
-        // Get the database connection details from the properties file
-        String dbUrl = config.getProperty(DB_URL_KEY);
-        String dbUsername = config.getProperty(DB_USERNAME_KEY);
-        String dbPassword = config.getProperty(DB_PASSWORD_KEY);
-
-        return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
-    }
 
     public List<Integer> insertPeopleData(Expense expense) {
         List<Integer> generatedKeys = new ArrayList<>();
+        Connection connection = null;
 
-        try (Connection connection = establishConnection()) {
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Create the 'people' table if it doesn't exist
             String createTableQuery = "CREATE TABLE IF NOT EXISTS people (" +
                     "person_id INT AUTO_INCREMENT PRIMARY KEY, " +
@@ -94,20 +67,26 @@ public class ExpenseDAO {
                     } else {
                         System.out.println("Failed to insert into `people` table");
                     }
+
                 }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
 
         return generatedKeys;
     }
 
     public int insertExpenseData(Expense expense) {
+        Connection connection = null;
         int generatedExpenseId = -1;
         int creditorId = getPersonIdByName(expense.getCreditorName());
 
-        try (Connection connection = establishConnection()) {
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Create the table if it doesn't exist
             String createTableQuery = "CREATE TABLE IF NOT EXISTS expenses (" +
                     "expense_id INT AUTO_INCREMENT PRIMARY KEY, " +
@@ -130,7 +109,8 @@ public class ExpenseDAO {
             }
 
             // Prepare the insert statement
-            String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, split_count, creditor_id, creditor_name) " +
+            String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, " +
+                    "split_count, creditor_id, creditor_name) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             // Convert java.util.Date to java.sql.Date
@@ -160,13 +140,17 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
 
         return generatedExpenseId;
     }
 
     public void insertExpensePersonsData(Expense expense, List<Integer> personIds, int expenseId) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Create the 'expensePersons' table if it doesn't exist
             String createQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
                     "expense_id INT NOT NULL, " +
@@ -178,7 +162,6 @@ public class ExpenseDAO {
                     "FOREIGN KEY (expense_id) REFERENCES expenses(expense_id), " +
                     "FOREIGN KEY (debtor_id) REFERENCES people(person_id)" +
                     ")";
-
 
             Statement createTableStatement = connection.createStatement();
             int tableCreated = createTableStatement.executeUpdate(createQuery);
@@ -210,7 +193,7 @@ public class ExpenseDAO {
                 insertTableStatement.setInt(1, expenseId);
                 insertTableStatement.setInt(2, creditorId);
                 insertTableStatement.setInt(3, personId);
-                insertTableStatement.setDouble(4, expense.getItemCost() / expense.getDebtorNames().size());
+                insertTableStatement.setDouble(4, expense.getItemCost()/expense.getDebtorNames().size());
 
                 int rowsInserted = insertTableStatement.executeUpdate();
 
@@ -223,6 +206,8 @@ public class ExpenseDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
@@ -233,6 +218,7 @@ public class ExpenseDAO {
     }
 
     public void createCombinedExpensePersons() {
+        Connection connection = null;
         String createViewQuery = "CREATE VIEW combinedExpensePersons AS " +
                 "SELECT ep.expense_id, e.expense_date, e.establishment_name, e.expense_name, " +
                 "ep.creditor_id, p1.person_name AS creditor_name, " +
@@ -242,18 +228,23 @@ public class ExpenseDAO {
                 "JOIN people p2 ON ep.debtor_id = p2.person_id " +
                 "JOIN expenses e ON ep.expense_id = e.expense_id";
 
-        try (Connection connection = establishConnection()) {
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             Statement statement = connection.createStatement();
             statement.execute(createViewQuery);
             System.out.println("View `createCombinedExpensePersons` created successfully.");
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
     public int getPersonIdByName(String personName) {
+        Connection connection = null;
         int personId = -1;
-        try (Connection connection = establishConnection()) {
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Get the creditor_id for the
             String selectQuery = "SELECT person_id FROM people WHERE person_name = ? LIMIT 1";
             PreparedStatement statement = connection.prepareStatement(selectQuery);
@@ -267,13 +258,18 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
         return personId;
     }
 
     public int getCreditorIdByExpenseId(int expenseId) {
+        Connection connection = null;
         int creditorId = -1;
-        try (Connection connection = establishConnection()) {
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Get the creditor_id for the
             String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ? LIMIT 1";
             PreparedStatement statement = connection.prepareStatement(selectQuery);
@@ -287,14 +283,19 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
+
         return creditorId;
     }
 
     public List<DebtRecord> calculateDebt() {
+        Connection connection = null;
         List<DebtRecord> debtRecords = new ArrayList<>();
 
-        try (Connection connection = establishConnection()) {
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             String selectQuery = "SELECT creditor_name, debtor_name, SUM(amount_owed) AS total_amount_owed " +
                     "FROM combinedExpensePersons " +
                     "WHERE creditor_name <> debtor_name AND payment_status = 'n' " +
@@ -315,14 +316,19 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
+
         return debtRecords;
     }
 
     public List<String> getAllPeopleNames() {
+        Connection connection = null;
         List<String> peopleNames = new ArrayList<>();
 
-        try (Connection connection = establishConnection()) {
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             String query = "SELECT person_name FROM people";
 
             try (Statement statement = connection.createStatement();
@@ -335,6 +341,8 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
 
         return peopleNames;
@@ -446,7 +454,10 @@ public class ExpenseDAO {
     // TODO: Update both creditor_id and creditor_name
     // TODO: Create a new entry for people table if they don't exist
     public void updateCreditorName(int expenseId, Scanner scanner) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             boolean isValidName = false;
             String newCreditorName = "";
 
@@ -475,11 +486,16 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
     public void removeDebtorName(int expenseId, Scanner scanner) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             System.out.println("Enter the debtor name you would like to remove");
 
             String debtorName = scanner.nextLine();
@@ -508,11 +524,16 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
     public void addDebtorName(int expenseId, Scanner scanner) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             String newDebtorName = scanner.nextLine();
             if (InputValidator.isValidName(newDebtorName)) {
                 int personId = addNewPersonIfNotExists(connection, newDebtorName);
@@ -523,6 +544,8 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
@@ -617,7 +640,10 @@ public class ExpenseDAO {
     }
 
     public void updateExpenseDate(int expenseId, Scanner scanner) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             java.util.Date date = null;
             Date sqlDate = null;
             boolean isValidDate = false;
@@ -658,11 +684,16 @@ public class ExpenseDAO {
             System.out.println("Rows affected: " + rowsAffected);
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
     public void updateExpenseEstablishmentName(int expenseId, Scanner scanner) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             String establishmentName = null;
             boolean isValidEstablishmentName = false;
 
@@ -692,11 +723,16 @@ public class ExpenseDAO {
             System.out.println("Rows affected: " + rowsAffected);
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
     public void updateExpenseName(int expenseId, Scanner scanner) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             String expenseName = null;
             boolean isValidExpenseName = false;
 
@@ -726,12 +762,17 @@ public class ExpenseDAO {
             System.out.println("Rows affected: " + rowsAffected);
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
     // Update total_cost in `expense` table based on expense_id
     public void updateExpenseCost(int expenseId, Scanner scanner) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             double expenseCost = 0;
             boolean isValidExpenseCost = false;
 
@@ -787,12 +828,17 @@ public class ExpenseDAO {
             System.out.println("Rows updated: " + rowsUpdated);
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
 
     public void deleteOrphanUsers() {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Delete from `people` table if they're not associated with any expenses
             String selectQuery = "SELECT person_id from people";
             PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
@@ -823,16 +869,20 @@ public class ExpenseDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
-
     }
 
     // TODO: Allow multiple updates
     // TODO: Input validation for user inputs
     public void updatePaymentStatus(int expenseId, Scanner scanner) {
+        Connection connection = null;
         // Create an empty HashSet to contain valid debtor ids
-        Set<Integer> validDebtorIds = new HashSet<>();
-        try (Connection connection = establishConnection()) {
+//        Set<Integer> validDebtorIds = new HashSet<>();
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Create a SQL query
             String sqlQuery = "SELECT debtor_id, debtor_name, amount_owed, payment_status FROM combinedExpensePersons WHERE expense_id = ?";
 
@@ -853,10 +903,11 @@ public class ExpenseDAO {
                 char paymentStatus = resultSet.getString("payment_status").charAt(0);
 
                 // Add valid debtor ids to HashSet
-                validDebtorIds.add(debtorId);
+//                validDebtorIds.add(debtorId);
 
                 // Print id and name of debtors associated with this expense
-                System.out.println("id: " + debtorId + ", name: " + debtorName + ", amount owed: " + amountOwed + ", payment status: " + paymentStatus);
+                System.out.println("id: " + debtorId + ", name: " + debtorName + ", amount owed: " + amountOwed +
+                        ", payment status: " + paymentStatus);
             }
 
             System.out.println("Enter the ID of debtor to modify payment status");
@@ -884,12 +935,17 @@ public class ExpenseDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
     // TODO: Refactor
     public void deleteExpense(int expenseId) {
-        try (Connection connection = establishConnection()) {
+        Connection connection = null;
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
             // Delete from expensePersons table
             String deleteExpensePersonsQuery = "DELETE FROM expensePersons WHERE expense_id = ?";
             PreparedStatement expensePersonsStatement = connection.prepareStatement(deleteExpensePersonsQuery);
@@ -923,13 +979,15 @@ public class ExpenseDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
         }
     }
 
 //    TODO: Make sure the order the results by the expense_id
 //    public void displayAllTransactions() {
 //        // Display the following: date, establishment nme, expenseId, expense name, cost, debtor name, creditor
-//        try (Connection connection = establishConnection()) {
+//        try (Connection connection = DatabaseConnectionManager.establishConnection()) {
 //            String selectQuery = "SELECT ";
 //        } catch (SQLException e) {
 //            e.printStackTrace();
