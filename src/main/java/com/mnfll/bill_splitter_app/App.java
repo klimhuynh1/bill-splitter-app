@@ -25,6 +25,7 @@ public class App {
             System.out.println("3. Display transactions");
             System.out.println("4. Display net debt");
             System.out.println("5. Exit");
+            System.out.println();
 
             String userInput = scanner.nextLine();
 
@@ -57,8 +58,12 @@ public class App {
     public static void addExpense(Scanner scanner) throws ParseException {
         // Create a list to store expenses
         List<Expense> expenses = new ArrayList<>();
+        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
         // Create a expenseDAO object to perform SQL operations
-        ExpenseDAO expenseDAO = new ExpenseDAO();
+        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
+        TableCreationManager tableCreationManager = new TableCreationManager();
+        DataInsertionManager dataInsertionManager = new DataInsertionManager(jdbcPersonDAO);
+
         boolean addMoreExpenses = true;
 
         while (addMoreExpenses) {
@@ -171,16 +176,15 @@ public class App {
 
         for (Expense expense : expenses) {
             expense.displayExpense();
-            expenseDAO.saveExpenseDataToDatabase(expense);
+            expenseDAO.saveExpenseDataToDatabase(expense, tableCreationManager, dataInsertionManager);
         }
-        expenseDAO.createCombinedExpensePersons();
-
     }
 
     // TODO: Validate the user inputs
     public static void editExpense(Scanner scanner) {
+        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
         // Create a expenseDAO object to perform SQL operations
-        ExpenseDAO expenseDAO = new ExpenseDAO();
+        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
         System.out.println("Enter the expense ID: ");
         int expenseId = Integer.parseInt(scanner.nextLine());
         System.out.println("What would you like to edit?");
@@ -210,7 +214,8 @@ public class App {
 //    }
 
     public static void displayNetDebt() {
-        ExpenseDAO expenseDAO = new ExpenseDAO();
+        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
+        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
         List<DebtRecord> debtRecords = expenseDAO.calculateDebt();
         List<String> peopleNames = expenseDAO.getAllPeopleNames();
 

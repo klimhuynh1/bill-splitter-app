@@ -96,4 +96,27 @@ public class TableCreationManager {
             DatabaseConnectionManager.closeConnection(connection);
         }
     }
+
+    public void createCombinedExpensePersonsView() {
+        Connection connection = null;
+        String createViewQuery = "CREATE OR REPLACE VIEW combinedExpensePersons AS " +
+                "SELECT ep.expense_id, e.expense_date, e.establishment_name, e.expense_name, " +
+                "ep.creditor_id, p1.person_name AS creditor_name, " +
+                "ep.debtor_id, p2.person_name AS debtor_name, ep.amount_owed, ep.payment_status " +
+                "FROM expensePersons ep " +
+                "JOIN people p1 ON ep.creditor_id = p1.person_id " +
+                "JOIN people p2 ON ep.debtor_id = p2.person_id " +
+                "JOIN expenses e ON ep.expense_id = e.expense_id";
+
+        try {
+            connection = DatabaseConnectionManager.establishConnection();
+            Statement statement = connection.createStatement();
+            statement.execute(createViewQuery);
+            System.out.println("View `createCombinedExpensePersons` created successfully.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(connection);
+        }
+    }
 }
