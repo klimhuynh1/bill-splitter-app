@@ -9,10 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Scanner;
+import java.util.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
@@ -60,9 +57,9 @@ public class ExpenseDAO {
             int tableCreated = createTableStatement.executeUpdate(createTableQuery);
 
             if (tableCreated >= 0) {
-                System.out.println("Table 'people' created successfully");
+                System.out.println("Table `people` created successfully");
             } else {
-                System.out.println("Failed to create table 'people'");
+                System.out.println("Failed to create table `people`");
             }
 
             // Prepare the select statement to check if the name already exists
@@ -176,7 +173,7 @@ public class ExpenseDAO {
                     "creditor_id INT NOT NULL, " +
                     "debtor_id INT NOT NULL, " +
                     "amount_owed DECIMAL(10,2) NOT NULL, " +
-                    "is_paid CHAR(1) DEFAULT 'n' CHECK (is_paid IN ('y', 'n')), " +
+                    "payment_status CHAR(1) DEFAULT 'n' CHECK (payment_status IN ('y', 'n')), " +
                     "PRIMARY KEY (expense_id, debtor_id), " +
                     "FOREIGN KEY (expense_id) REFERENCES expenses(expense_id), " +
                     "FOREIGN KEY (debtor_id) REFERENCES people(person_id)" +
@@ -239,7 +236,7 @@ public class ExpenseDAO {
         String createViewQuery = "CREATE VIEW combinedExpensePersons AS " +
                 "SELECT ep.expense_id, e.expense_date, e.establishment_name, e.expense_name, " +
                 "ep.creditor_id, p1.person_name AS creditor_name, " +
-                "ep.debtor_id, p2.person_name AS debtor_name, ep.amount_owed, ep.is_paid " +
+                "ep.debtor_id, p2.person_name AS debtor_name, ep.amount_owed, ep.payment_status " +
                 "FROM expensePersons ep " +
                 "JOIN people p1 ON ep.creditor_id = p1.person_id " +
                 "JOIN people p2 ON ep.debtor_id = p2.person_id " +
@@ -300,7 +297,7 @@ public class ExpenseDAO {
         try (Connection connection = establishConnection()) {
             String selectQuery = "SELECT creditor_name, debtor_name, SUM(amount_owed) AS total_amount_owed " +
                     "FROM combinedExpensePersons " +
-                    "WHERE creditor_name <> debtor_name " +
+                    "WHERE creditor_name <> debtor_name AND payment_status = 'n' " +
                     "GROUP BY creditor_name, debtor_name";
 
             PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
@@ -412,6 +409,8 @@ public class ExpenseDAO {
     //	TODO: Requires testing
     public void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
         switch (updateOption) {
+            case 0:
+                break;
             case 1:
                 updateExpenseDate(expenseId, scanner);
                 break;
@@ -431,10 +430,12 @@ public class ExpenseDAO {
                 removeDebtorName(expenseId, scanner);
                 break;
             case 7:
-                // Edit creditor_name in `expense` table based on expense_id
                 updateCreditorName(expenseId, scanner);
                 break;
             case 8:
+                updatePaymentStatus(expenseId, scanner);
+                break;
+            case 9:
                 deleteExpense(expenseId);
                 break;
             default:
@@ -824,6 +825,66 @@ public class ExpenseDAO {
             e.printStackTrace();
         }
 
+    }
+
+    // TODO: Allow multiple updates
+    // TODO: Input validation for user inputs
+    public void updatePaymentStatus(int expenseId, Scanner scanner) {
+        // Create an empty HashSet to contain valid debtor ids
+        Set<Integer> validDebtorIds = new HashSet<>();
+        try (Connection connection = establishConnection()) {
+            // Create a SQL query
+            String sqlQuery = "SELECT debtor_id, debtor_name, amount_owed, payment_status FROM combinedExpensePersons WHERE expense_id = ?";
+
+            // Create a Statement object
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlQuery);
+
+            // Set value for the placeholder in the WHERE clause
+            preparedStatement.setInt(1, expenseId);
+
+            // Execute the query and get the result set
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            // Iterate through the result set and print data
+            while (resultSet.next()) {
+                int debtorId = resultSet.getInt("debtor_id");
+                String debtorName = resultSet.getString("debtor_name");
+                double amountOwed = resultSet.getDouble("amount_owed");
+                char paymentStatus = resultSet.getString("payment_status").charAt(0);
+
+                // Add valid debtor ids to HashSet
+                validDebtorIds.add(debtorId);
+
+                // Print id and name of debtors associated with this expense
+                System.out.println("id: " + debtorId + ", name: " + debtorName + ", amount owed: " + amountOwed + ", payment status: " + paymentStatus);
+            }
+
+            System.out.println("Enter the ID of debtor to modify payment status");
+            String debtorIdModify = scanner.nextLine();
+
+            System.out.println("Enter the new payment status");
+            String newPaymentStatus = scanner.nextLine();
+
+
+            // SQL query to update paymentStatus status
+            String updateQuery = "UPDATE expensePersons SET payment_status = ? WHERE expense_id = ? AND debtor_id = ?";
+
+            // Prepare the statement
+            PreparedStatement preparedStatement1 = connection.prepareStatement(updateQuery);
+
+            // Set new values for columns
+            preparedStatement1.setString(1, newPaymentStatus);
+            preparedStatement1.setInt(2, expenseId);
+            preparedStatement1.setInt(3, Integer.parseInt(debtorIdModify));
+
+            // Execute the update
+            int rowsUpdated = preparedStatement1.executeUpdate();
+            System.out.println("Rows updated: " + rowsUpdated);
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     // TODO: Refactor

@@ -184,6 +184,7 @@ public class App {
         System.out.println("Enter the expense ID: ");
         int expenseId = Integer.parseInt(scanner.nextLine());
         System.out.println("What would you like to edit?");
+        System.out.println("0. Cancel");
         System.out.println("1. Update expense date");
         System.out.println("2. Update establishment name");
         System.out.println("3. Update expense name");
@@ -191,7 +192,9 @@ public class App {
         System.out.println("5. Add debtor name");
         System.out.println("6. Remove debtor name");
         System.out.println("7. Update creditor name");
-        System.out.println("8. Delete expense");
+        System.out.println("8. Update payment status");
+        System.out.println("9. Delete expense");
+
         int updateOption = Integer.parseInt(scanner.nextLine());
 
         try {
