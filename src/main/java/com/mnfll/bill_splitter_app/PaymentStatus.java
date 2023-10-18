@@ -1,12 +1,12 @@
 package com.mnfll.bill_splitter_app;
 
-public enum paymentStatus {
+public enum PaymentStatus {
     YES("y"),
     NO("n");
 
     private final String code;
 
-    paymentStatus(String code) {
+    PaymentStatus(String code) {
         this.code = code;
     }
 
