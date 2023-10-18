@@ -40,7 +40,7 @@ public class App {
 //					displayTransactions();
                     //break;
                 case "4":
-                    displayNetDebt();
+                    displayNetDebts();
                     break;
                 case "5":
                     running = false;
@@ -213,23 +213,32 @@ public class App {
 //        expenseDAO.displayAllTransactions();
 //    }
 
-    public static void displayNetDebt() {
+    public static void displayNetDebts() {
+        try {
         JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
         ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
-        List<DebtRecord> debtRecords = expenseDAO.calculateDebt();
+        DebtCalculator debtCalculator = new DebtCalculator();
+        List<DebtRecord> debtRecords = debtCalculator.calculateDebt();
         List<String> peopleNames = expenseDAO.getAllPeopleNames();
 
-        if (!debtRecords.isEmpty()) {
-            if (!peopleNames.isEmpty()) {
-                double[][] debtMatrix = expenseDAO.createDebtMatrix(debtRecords, peopleNames);
-                expenseDAO.displayDebtMatrix(debtMatrix, peopleNames);
-                System.out.println();
-                expenseDAO.calculateNetDebts(debtMatrix, peopleNames);
-            } else {
-                System.out.println("There are no people.");
-            }
-        } else {
+        if (debtRecords.isEmpty()) {
             System.out.println("There are no debts.");
+            return;
         }
-    }
+
+        if (peopleNames.isEmpty()) {
+            System.out.println("There are no people.");
+            return;
+        }
+
+        double[][] debtMatrix = debtCalculator.createDebtMatrix(debtRecords, peopleNames);
+        debtCalculator.displayDebtMatrix(debtMatrix, peopleNames);
+
+        double[][] netDebts = debtCalculator.calculateNetDebts(debtMatrix, peopleNames);
+        System.out.println();
+        debtCalculator.displayNetDebts(netDebts, peopleNames);
+    } catch (Exception e) {
+            System.err.println("An error occurred while displaying net debts: " + e.getMessage());
+        }
+}
 }
