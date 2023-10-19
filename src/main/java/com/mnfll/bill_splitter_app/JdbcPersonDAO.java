@@ -12,14 +12,13 @@ public class JdbcPersonDAO implements PersonDAO {
         int personId = -1;
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Get the creditor_id for the
+            // Retrieve person_id given person_name
             String selectQuery = "SELECT person_id FROM people WHERE person_name = ? LIMIT 1";
             PreparedStatement statement = connection.prepareStatement(selectQuery);
             statement.setString(1, personName);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
                 personId = resultSet.getInt("person_id");
-//                System.out.println("Person ID: " + personId);
             } else {
                 System.out.println("Person Id not found");
             }
