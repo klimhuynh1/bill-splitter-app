@@ -56,8 +56,6 @@ public class ExpenseDAO {
         return creditorId;
     }
 
-
-
     public List<String> getAllPeopleNames() {
         Connection connection = null;
         List<String> peopleNames = new ArrayList<>();
@@ -82,10 +80,6 @@ public class ExpenseDAO {
 
         return peopleNames;
     }
-
-
-
-
 
     //	TODO: Requires testing
     public void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
@@ -657,14 +651,43 @@ public class ExpenseDAO {
         }
     }
 
-//    TODO: Make sure the order the results by the expense_id
-//    public void displayAllTransactions() {
-//        // Display the following: date, establishment nme, expenseId, expense name, cost, debtor name, creditor
-//        try (Connection connection = DatabaseConnectionManager.establishConnection()) {
-//            String selectQuery = "SELECT ";
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
-//
-//    }
+    public void displayAllExpenseTransactions() {
+        String query = "SELECT expense_date, establishment_name, expense_name, creditor_name, " +
+                "debtor_name, amount_owed, payment_status FROM combinedExpensePersons ORDER BY " +
+                "expense_date, establishment_name, expense_name, creditor_name, debtor_name";
+        Connection conn = null;
+        Statement stmt = null;
+        try {
+            conn = DatabaseConnectionManager.establishConnection();
+            stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query);
+
+            // Get metadata to retrieve column names
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            // Print column headers
+            for (int i = 1; i <= columnCount; i++) {
+                // Adjust the column with
+                System.out.printf("%-20s", metaData.getColumnName(i));
+            }
+            System.out.println();
+
+            // Print the result set
+            while (rs.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    System.out.printf("%-20s", rs.getString(i));
+                }
+                System.out.println();
+            }
+
+            // Close resources
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            DatabaseConnectionManager.closeConnection(conn);
+        }
+    }
 }

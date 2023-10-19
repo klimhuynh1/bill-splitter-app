@@ -37,8 +37,8 @@ public class App {
                     editExpense(scanner);
                     break;
                 case "3":
-//					displayTransactions();
-                    //break;
+                    displayAllExpenseTransactions();
+                    break;
                 case "4":
                     displayNetDebts();
                     break;
@@ -208,37 +208,38 @@ public class App {
         }
     }
 
-//    public static void displayAllTransactions() {
-//        ExpenseDAO expenseDAO = new ExpenseDAO();
-//        expenseDAO.displayAllTransactions();
-//    }
+    public static void displayAllExpenseTransactions() {
+        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
+        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
+        expenseDAO.displayAllExpenseTransactions();
+    }
 
     public static void displayNetDebts() {
         try {
-        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
-        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
-        DebtCalculator debtCalculator = new DebtCalculator();
-        List<DebtRecord> debtRecords = debtCalculator.calculateDebt();
-        List<String> peopleNames = expenseDAO.getAllPeopleNames();
+            JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
+            ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
+            DebtCalculator debtCalculator = new DebtCalculator();
+            List<DebtRecord> debtRecords = debtCalculator.calculateDebt();
+            List<String> peopleNames = expenseDAO.getAllPeopleNames();
 
-        if (debtRecords.isEmpty()) {
-            System.out.println("There are no debts.");
-            return;
-        }
+            if (debtRecords.isEmpty()) {
+                System.out.println("There are no debts.");
+                return;
+            }
 
-        if (peopleNames.isEmpty()) {
-            System.out.println("There are no people.");
-            return;
-        }
+            if (peopleNames.isEmpty()) {
+                System.out.println("There are no people.");
+                return;
+            }
 
-        double[][] debtMatrix = debtCalculator.createDebtMatrix(debtRecords, peopleNames);
-        debtCalculator.displayDebtMatrix(debtMatrix, peopleNames);
+            double[][] debtMatrix = debtCalculator.createDebtMatrix(debtRecords, peopleNames);
+            debtCalculator.displayDebtMatrix(debtMatrix, peopleNames);
 
-        double[][] netDebts = debtCalculator.calculateNetDebts(debtMatrix, peopleNames);
-        System.out.println();
-        debtCalculator.displayNetDebts(netDebts, peopleNames);
-    } catch (Exception e) {
+            double[][] netDebts = debtCalculator.calculateNetDebts(debtMatrix, peopleNames);
+            System.out.println();
+            debtCalculator.displayNetDebts(netDebts, peopleNames);
+        } catch (Exception e) {
             System.err.println("An error occurred while displaying net debts: " + e.getMessage());
         }
-}
+    }
 }
