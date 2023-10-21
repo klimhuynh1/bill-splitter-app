@@ -3,7 +3,7 @@ package com.mnfll.bill_splitter_app;
 import java.sql.*;
 
 public class ResourcesUtils {
-    public static void closeResult(ResultSet rs) {
+    public static void closeResultSet(ResultSet rs) {
         try {
             if (rs != null) {
                 rs.close();
@@ -41,4 +41,5 @@ public class ResourcesUtils {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
 }

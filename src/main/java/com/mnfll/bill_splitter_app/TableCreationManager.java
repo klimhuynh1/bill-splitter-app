@@ -30,7 +30,7 @@ public class TableCreationManager {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
@@ -62,7 +62,7 @@ public class TableCreationManager {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
     }
     public void createExpensePersonsTable() {
@@ -93,7 +93,7 @@ public class TableCreationManager {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
@@ -116,7 +116,7 @@ public class TableCreationManager {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 }
