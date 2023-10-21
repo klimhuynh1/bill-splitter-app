@@ -31,16 +31,18 @@ public class ExpenseDAO {
     }
 
     public int getCreditorIdByExpenseId(int expenseId) {
-        Connection connection = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Connection conn = null;
         int creditorId = -1;
 
         try {
-            connection = DatabaseConnectionManager.establishConnection();
+            conn = DatabaseConnectionManager.establishConnection();
             // Get the creditor_id for the
             String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ? LIMIT 1";
-            PreparedStatement statement = connection.prepareStatement(selectQuery);
-            statement.setInt(1, expenseId);
-            ResultSet resultSet = statement.executeQuery();
+            ps = conn.prepareStatement(selectQuery);
+            ps.setInt(1, expenseId);
+            ResultSet resultSet = ps.executeQuery();
             if (resultSet.next()) {
                 creditorId = resultSet.getInt("creditor_id");
                 System.out.println("creditor ID: " + creditorId);
@@ -50,34 +52,37 @@ public class ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closeConnection(conn);
         }
 
         return creditorId;
     }
 
     public List<String> getAllPeopleNames() {
-        Connection connection = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        Connection conn = null;
         List<String> peopleNames = new ArrayList<>();
 
         try {
-            connection = DatabaseConnectionManager.establishConnection();
+            conn = DatabaseConnectionManager.establishConnection();
             String query = "SELECT person_name FROM people";
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery(query);
 
-            try (Statement statement = connection.createStatement();
-                 ResultSet resultSet = statement.executeQuery(query)) {
-
-                while (resultSet.next()) {
-                    String personName = resultSet.getString("person_name");
-                    peopleNames.add(personName);
-                }
+            while (rs.next()) {
+                String personName = rs.getString("person_name");
+                peopleNames.add(personName);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closeStatement(stmt);
+            ResourcesUtils.closeConnection(conn);
         }
-
         return peopleNames;
     }
 
@@ -121,10 +126,11 @@ public class ExpenseDAO {
     // TODO: Update both creditor_id and creditor_name
     // TODO: Create a new entry for people table if they don't exist
     public void updateCreditorName(int expenseId, Scanner scanner) {
-        Connection connection = null;
+        PreparedStatement ps = null;
+        Connection conn = null;
 
         try {
-            connection = DatabaseConnectionManager.establishConnection();
+            conn = DatabaseConnectionManager.establishConnection();
             boolean isValidName = false;
             String newCreditorName = "";
 
@@ -140,11 +146,11 @@ public class ExpenseDAO {
             }
 
             String updateStatement = "UPDATE expenses SET creditor_name = ? WHERE expense_id = ?";
-            PreparedStatement preparedStatement = connection.prepareStatement(updateStatement);
-            preparedStatement.setString(1, newCreditorName);
-            preparedStatement.setInt(2, expenseId);
+            ps = conn.prepareStatement(updateStatement);
+            ps.setString(1, newCreditorName);
+            ps.setInt(2, expenseId);
 
-            int rowsAffected = preparedStatement.executeUpdate();
+            int rowsAffected = ps.executeUpdate();
 
             if (rowsAffected > 0) {
                 System.out.println("Update successful.");
@@ -154,18 +160,20 @@ public class ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closeConnection(conn);
         }
     }
 
     public void removeDebtorName(int expenseId, Scanner scanner) {
-        Connection connection = null;
+        PreparedStatement ps = null;
+        Connection conn = null;
 
         try {
-            connection = DatabaseConnectionManager.establishConnection();
+            conn = DatabaseConnectionManager.establishConnection();
             System.out.println("Enter the debtor name you would like to remove");
-
             String debtorName = scanner.nextLine();
+
             if (InputValidator.isValidName(debtorName)) {
                 int personId = jdbcPersonDAO.getPersonIdByName(debtorName);
                 int creditorId = getCreditorIdByExpenseId(expenseId);
@@ -175,139 +183,196 @@ public class ExpenseDAO {
                     throw new IllegalArgumentException("You cannot remove debtor name as they are the creditor");
                 } else {
                     // Otherwise, remove record in `expensePersons` table based on person_id and expense_id
-                    String deleteQuery = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
-                    PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
-                    deleteStatement.setInt(1, expenseId);
-                    deleteStatement.setInt(2, personId);
-                    deleteStatement.executeUpdate();
+                    String query = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
+                    ps = conn.prepareStatement(query);
+                    ps.setInt(1, expenseId);
+                    ps.setInt(2, personId);
+                    ps.executeUpdate();
 
                     // Update split_count in `expenses` table based on expense_id
-                    int splitCount = updateSplitCount(connection, expenseId, false);
+                    int splitCount = updateSplitCount(conn, expenseId, false);
                     // Re-calculate cost per debtor
-                    double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
+                    double newAmountOwed = calculateNewAmountOwed(conn, expenseId, splitCount);
                     // Update amount_owed based on expense_id
-                    updateAmountOwed(connection, expenseId, newAmountOwed);
+                    updateAmountOwed(conn, expenseId, newAmountOwed);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closeConnection(conn);
         }
     }
 
     public void addDebtorName(int expenseId, Scanner scanner) {
-        Connection connection = null;
+        Connection conn = null;
 
         try {
-            connection = DatabaseConnectionManager.establishConnection();
+            conn = DatabaseConnectionManager.establishConnection();
             String newDebtorName = scanner.nextLine();
+
             if (InputValidator.isValidName(newDebtorName)) {
-                int personId = addNewPersonIfNotExists(connection, newDebtorName);
-                int splitCount = updateSplitCount(connection, expenseId, true);
-                double newAmountOwed = calculateNewAmountOwed(connection, expenseId, splitCount);
-                updateAmountOwed(connection, expenseId, newAmountOwed);
-                addExpensePersonRecord(connection, expenseId, personId, newAmountOwed);
+                int personId = addNewPersonIfNotExists(conn, newDebtorName);
+                int splitCount = updateSplitCount(conn, expenseId, true);
+                double newAmountOwed = calculateNewAmountOwed(conn, expenseId, splitCount);
+                updateAmountOwed(conn, expenseId, newAmountOwed);
+                addExpensePersonRecord(conn, expenseId, personId, newAmountOwed);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(conn);
         }
     }
 
-    private int addNewPersonIfNotExists(Connection connection, String debtorName) throws SQLException {
-        String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
-        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-        selectStatement.setString(1, debtorName);
-        ResultSet selectResultSet = selectStatement.executeQuery();
+    //    TODO: Requires testing
+    private int addNewPersonIfNotExists(Connection conn, String debtorName) throws SQLException {
+        PreparedStatement ps1 = null;
+        PreparedStatement ps2 = null;
+        ResultSet rs = null;
 
-        if (selectResultSet.next()) {
-            // Person already exists, retrieve the person id
-            return selectResultSet.getInt("person_id");
-        } else {
-            // Person does not exist, create a new record
-            String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
-            PreparedStatement insertStatement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
-            insertStatement.setString(1, debtorName);
-            insertStatement.executeUpdate();
+        try {
+            String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
+            ps1 = conn.prepareStatement(selectQuery);
+            ps1.setString(1, debtorName);
+            rs = ps1.executeQuery();
 
-            // Retrieve the generated person_id
-            ResultSet generatedKeys = insertStatement.getGeneratedKeys();
-            if (generatedKeys.next()) {
-                return generatedKeys.getInt(1);
-            }
-        }
-
-        return -1; // Return a default value if personId is not found (shouldn't happen)
-    }
-
-    private int updateSplitCount(Connection connection, int expenseId, Boolean increment) throws SQLException {
-        String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
-        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-        selectStatement.setInt(1, expenseId);
-        ResultSet selectResultSet = selectStatement.executeQuery();
-        int splitCount;
-
-        if (selectResultSet.next()) {
-            if (increment) {
-                splitCount = selectResultSet.getInt("split_count") + 1;
+            if (rs.next()) {
+                // Person already exists, retrieve the person id
+                return rs.getInt("person_id");
             } else {
-                splitCount = selectResultSet.getInt("split_count") - 1;
+                // Person does not exist, create a new record
+                String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
+                ps2 = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
+                ps2.setString(1, debtorName);
+                ps2.executeUpdate();
+
+                // Retrieve the generated person_id
+                ResultSet generatedKeys = ps2.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closePrepapredStatement(ps1);
+        }
 
+        return -1;
+    }
 
-            String updateQuery = "UPDATE expenses SET split_count = ? WHERE expense_id = ?";
-            PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
-            updateStatement.setInt(1, splitCount);
-            updateStatement.setInt(2, expenseId);
+    private int updateSplitCount(Connection conn, int expenseId, Boolean increment) throws SQLException {
+        PreparedStatement ps1 = null;
+        PreparedStatement ps2 = null;
+        ResultSet rs = null;
 
-            int rowsAffected = updateStatement.executeUpdate();
-            System.out.println("Update split_count -- Rows affected: " + rowsAffected);
+        try {
+            String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
+            ps1 = conn.prepareStatement(selectQuery);
+            ps1.setInt(1, expenseId);
+            rs = ps1.executeQuery();
+            int splitCount;
 
-            return splitCount;
+            if (rs.next()) {
+                if (increment) {
+                    splitCount = rs.getInt("split_count") + 1;
+                } else {
+                    splitCount = rs.getInt("split_count") - 1;
+                }
+
+                String updateQuery = "UPDATE expenses SET split_count = ? WHERE expense_id = ?";
+                ps2 = conn.prepareStatement(updateQuery);
+                ps2.setInt(1, splitCount);
+                ps2.setInt(2, expenseId);
+
+                int rowsAffected = ps2.executeUpdate();
+                System.out.println("Update split_count -- Rows affected: " + rowsAffected);
+
+                return splitCount;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closePrepapredStatement(ps1);
         }
 
         return -1;
     }
 
     private double calculateNewAmountOwed(Connection connection, int expenseId, int splitCount) throws SQLException {
-        String selectQuery = "SELECT total_cost FROM expenses WHERE expense_id = ?";
-        PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-        selectStatement.setInt(1, expenseId);
-        ResultSet selectResultSet = selectStatement.executeQuery();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
 
-        if (selectResultSet.next()) {
-            double expenseCost = selectResultSet.getDouble("total_cost");
-            return expenseCost / splitCount;
+        try {
+            String query = "SELECT total_cost FROM expenses WHERE expense_id = ?";
+            ps = connection.prepareStatement(query);
+            ps.setInt(1, expenseId);
+            ResultSet selectResultSet = ps.executeQuery();
+
+            if (selectResultSet.next()) {
+                double expenseCost = selectResultSet.getDouble("total_cost");
+                return expenseCost / splitCount;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePrepapredStatement(ps);
         }
+
 
         return -1;
     }
 
     private void updateAmountOwed(Connection connection, int expenseId, double newAmountOwed) throws SQLException {
-        String updateQuery = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
-        PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
-        updateStatement.setDouble(1, newAmountOwed);
-        updateStatement.setInt(2, expenseId);
+        PreparedStatement ps = null;
+        ResultSet rs = null;
 
-        int rowsAffected = updateStatement.executeUpdate();
-        System.out.println("Update amount owed -- Rows affected: " + rowsAffected);
+        try {
+            String query = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
+            ps = connection.prepareStatement(query);
+            ps.setDouble(1, newAmountOwed);
+            ps.setInt(2, expenseId);
+
+            int rowsAffected = ps.executeUpdate();
+            System.out.println("Update amount owed -- Rows affected: " + rowsAffected);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePrepapredStatement(ps);
+        }
     }
 
     private void addExpensePersonRecord(Connection connection, int expenseId, int personId, double newAmountOwed) throws SQLException {
-        String insertQuery = "INSERT INTO expensePersons (expense_id, person_id, amount_owed) VALUES (?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(insertQuery);
-        statement.setInt(1, expenseId);
-        statement.setInt(2, personId);
-        statement.setDouble(3, newAmountOwed);
+        PreparedStatement ps = null;
 
-        int rowsAffected = statement.executeUpdate();
-        System.out.println("Add row for new debtor name -- Rows affected: " + rowsAffected);
+        try {
+            String insertQuery = "INSERT INTO expensePersons (expense_id, person_id, amount_owed) VALUES (?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(insertQuery);
+            statement.setInt(1, expenseId);
+            statement.setInt(2, personId);
+            statement.setDouble(3, newAmountOwed);
+
+            int rowsAffected = statement.executeUpdate();
+            System.out.println("Add row for new debtor name -- Rows affected: " + rowsAffected);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closePrepapredStatement(ps);
+        }
     }
 
     public void updateExpenseDate(int expenseId, Scanner scanner) {
         Connection connection = null;
+        PreparedStatement ps = null;
+
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
@@ -339,25 +404,27 @@ public class ExpenseDAO {
 
             // Update expense_date in `expenses` table based on expense_id
             String query = "UPDATE expenses SET expense_date = ? WHERE expense_id = ?";
-            PreparedStatement statement = connection.prepareStatement(query);
+            ps = connection.prepareStatement(query);
 
-            statement.setDate(1, sqlDate);
-            statement.setInt(2, expenseId);
+            ps.setDate(1, sqlDate);
+            ps.setInt(2, expenseId);
 
             // Execute the update query
-            int rowsAffected = statement.executeUpdate();
+            int rowsAffected = ps.executeUpdate();
 
             // Check the number of rows affected
             System.out.println("Rows affected: " + rowsAffected);
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
     public void updateExpenseEstablishmentName(int expenseId, Scanner scanner) {
         Connection connection = null;
+        PreparedStatement ps = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
@@ -378,25 +445,27 @@ public class ExpenseDAO {
 
             // Update establishment_name in `expenses` table based on expense_id
             String query = "UPDATE expenses SET establishment_name = ? WHERE expense_id = ?";
-            PreparedStatement statement = connection.prepareStatement(query);
+            ps = connection.prepareStatement(query);
 
-            statement.setString(1, establishmentName);
-            statement.setInt(2, expenseId);
+            ps.setString(1, establishmentName);
+            ps.setInt(2, expenseId);
 
             // Execute the update query
-            int rowsAffected = statement.executeUpdate();
+            int rowsAffected = ps.executeUpdate();
 
             // Check the number of rows affected
             System.out.println("Rows affected: " + rowsAffected);
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
     public void updateExpenseName(int expenseId, Scanner scanner) {
         Connection connection = null;
+        PreparedStatement ps = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
@@ -417,29 +486,34 @@ public class ExpenseDAO {
 
             // Update expense_date in `expenses` table based on expense_id
             String query = "UPDATE expenses SET expense_name = ? WHERE expense_id = ?";
-            PreparedStatement statement = connection.prepareStatement(query);
+            ps = connection.prepareStatement(query);
 
-            statement.setString(1, expenseName);
-            statement.setInt(2, expenseId);
+            ps.setString(1, expenseName);
+            ps.setInt(2, expenseId);
 
             // Execute the update query
-            int rowsAffected = statement.executeUpdate();
+            int rowsAffected = ps.executeUpdate();
 
             // Check the number of rows affected
             System.out.println("Rows affected: " + rowsAffected);
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
     // Update total_cost in `expense` table based on expense_id
     public void updateExpenseCost(int expenseId, Scanner scanner) {
-        Connection connection = null;
+        Connection conn = null;
+        PreparedStatement ps1 = null;
+        PreparedStatement ps2 = null;
+        ResultSet rs = null;
+        PreparedStatement ps3 = null;
 
         try {
-            connection = DatabaseConnectionManager.establishConnection();
+            conn = DatabaseConnectionManager.establishConnection();
             double expenseCost = 0;
             boolean isValidExpenseCost = false;
 
@@ -457,26 +531,26 @@ public class ExpenseDAO {
 
             // Update expense_cost in `expenses` table based on expense_id
             String updateQuery = "UPDATE expenses SET total_cost = ? WHERE expense_id = ?";
-            PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
-            updateStatement.setDouble(1, expenseCost);
-            updateStatement.setInt(2, expenseId);
+            ps1 = conn.prepareStatement(updateQuery);
+            ps1.setDouble(1, expenseCost);
+            ps1.setInt(2, expenseId);
 
             // Execute the update query
-            int rowsAffected = updateStatement.executeUpdate();
+            int rowsAffected = ps1.executeUpdate();
 
             // Check the number of rows affected
             System.out.println("Rows affected: " + rowsAffected);
 
             // Get the number of people that splitting this expense cost
             String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
-            PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-            selectStatement.setInt(1, expenseId);
+            ps2 = conn.prepareStatement(selectQuery);
+            ps2.setInt(1, expenseId);
 
             // Execute the select query
-            ResultSet resultSet = selectStatement.executeQuery();
+            rs = ps2.executeQuery();
             int splitCount = 0;
-            if (resultSet.next()) {
-                splitCount = resultSet.getInt("split_count");
+            if (rs.next()) {
+                splitCount = rs.getInt("split_count");
             }
 
             // Re-calculate the cost per person
@@ -484,52 +558,60 @@ public class ExpenseDAO {
 
             // Update amount_owed in `expensePersons` table for each person
             String updateAmountOwedQuery = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
-            PreparedStatement updateAmountOwedStatement = connection.prepareStatement(updateAmountOwedQuery);
-            updateAmountOwedStatement.setDouble(1, newAmountOwed);
-            updateAmountOwedStatement.setInt(2, expenseId);
+            ps3 = conn.prepareStatement(updateAmountOwedQuery);
+            ps3.setDouble(1, newAmountOwed);
+            ps3.setInt(2, expenseId);
 
             // Execute the update query
-            int rowsUpdated = updateAmountOwedStatement.executeUpdate();
+            int rowsUpdated = ps3.executeUpdate();
 
             // Check the number of rows updated
             System.out.println("Rows updated: " + rowsUpdated);
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps3);
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closeConnection(conn);
         }
     }
 
 
     public void deleteOrphanUsers() {
         Connection connection = null;
+        PreparedStatement ps1 = null;
+        ResultSet rs1 = null;
+        PreparedStatement ps2 = null;
+        ResultSet rs2 = null;
+        PreparedStatement ps3 = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Delete from `people` table if they're not associated with any expenses
             String selectQuery = "SELECT person_id from people";
-            PreparedStatement selectStatement = connection.prepareStatement(selectQuery);
-            ResultSet resultSet = selectStatement.executeQuery();
+            ps1 = connection.prepareStatement(selectQuery);
+            rs1 = ps1.executeQuery();
 
             // Iterate through the result set
-            while (resultSet.next()) {
-                int personId = resultSet.getInt("person_id");
+            while (rs1.next()) {
+                int personId = rs1.getInt("person_id");
 
                 // Check if the person_id exists in the person table
                 String checkQuery = "SELECT COUNT(*) FROM expensePersons WHERE person_id = ?";
-                PreparedStatement checkStatement = connection.prepareStatement(checkQuery);
-                checkStatement.setInt(1, personId);
-                ResultSet checkResult = checkStatement.executeQuery();
-                checkResult.next();
+                ps2 = connection.prepareStatement(checkQuery);
+                ps2.setInt(1, personId);
+                rs2 = ps2.executeQuery();
 
-                int count = checkResult.getInt(1);
+                int count = rs2.getInt(1);
 
                 if (count == 0) {
                     // Delete the user from the people table
                     String deleteQuery = "DELETE FROM people WHERE person_id = ?";
-                    PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
-                    deleteStatement.setInt(1, personId);
-                    int rowsAffected = deleteStatement.executeUpdate();
+                    ps3 = connection.prepareStatement(deleteQuery);
+                    ps3.setInt(1, personId);
+                    int rowsAffected = ps3.executeUpdate();
 
                     System.out.println(rowsAffected + " rows(s) for user ID: " + personId);
                 }
@@ -537,7 +619,12 @@ public class ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps3);
+            ResourcesUtils.closeResultSet(rs2);
+            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closeResultSet(rs1);
+            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
@@ -545,8 +632,9 @@ public class ExpenseDAO {
     // TODO: Input validation for user inputs
     public void updatePaymentStatus(int expenseId, Scanner scanner) {
         Connection connection = null;
-        // Create an empty HashSet to contain valid debtor ids
-//        Set<Integer> validDebtorIds = new HashSet<>();
+        PreparedStatement ps1 = null;
+        ResultSet rs1 = null;
+        PreparedStatement ps2 = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
@@ -554,27 +642,23 @@ public class ExpenseDAO {
             String sqlQuery = "SELECT debtor_id, debtor_name, amount_owed, payment_status FROM combinedExpensePersons WHERE expense_id = ?";
 
             // Create a Statement object
-            PreparedStatement preparedStatement = connection.prepareStatement(sqlQuery);
+            ps1 = connection.prepareStatement(sqlQuery);
 
             // Set value for the placeholder in the WHERE clause
-            preparedStatement.setInt(1, expenseId);
+            ps1.setInt(1, expenseId);
 
             // Execute the query and get the result set
-            ResultSet resultSet = preparedStatement.executeQuery();
+            rs1 = ps1.executeQuery();
 
             // Iterate through the result set and print data
-            while (resultSet.next()) {
-                int debtorId = resultSet.getInt("debtor_id");
-                String debtorName = resultSet.getString("debtor_name");
-                double amountOwed = resultSet.getDouble("amount_owed");
-                char paymentStatus = resultSet.getString("payment_status").charAt(0);
-
-                // Add valid debtor ids to HashSet
-//                validDebtorIds.add(debtorId);
+            while (rs1.next()) {
+                int debtorId = rs1.getInt("debtor_id");
+                String debtorName = rs1.getString("debtor_name");
+                double amountOwed = rs1.getDouble("amount_owed");
+                char paymentStatus = rs1.getString("payment_status").charAt(0);
 
                 // Print id and name of debtors associated with this expense
-                System.out.println("id: " + debtorId + ", name: " + debtorName + ", amount owed: " + amountOwed +
-                        ", payment status: " + paymentStatus);
+                System.out.println("id: " + debtorId + ", name: " + debtorName + ", amount owed: " + amountOwed + ", payment status: " + paymentStatus);
             }
 
             System.out.println("Enter the ID of debtor to modify payment status");
@@ -588,38 +672,41 @@ public class ExpenseDAO {
             String updateQuery = "UPDATE expensePersons SET payment_status = ? WHERE expense_id = ? AND debtor_id = ?";
 
             // Prepare the statement
-            PreparedStatement preparedStatement1 = connection.prepareStatement(updateQuery);
+            ps2 = connection.prepareStatement(updateQuery);
 
             // Set new values for columns
-            preparedStatement1.setString(1, newPaymentStatus);
-            preparedStatement1.setInt(2, expenseId);
-            preparedStatement1.setInt(3, Integer.parseInt(debtorIdModify));
+            ps2.setString(1, newPaymentStatus);
+            ps2.setInt(2, expenseId);
+            ps2.setInt(3, Integer.parseInt(debtorIdModify));
 
             // Execute the update
-            int rowsUpdated = preparedStatement1.executeUpdate();
+            int rowsUpdated = ps2.executeUpdate();
             System.out.println("Rows updated: " + rowsUpdated);
-
-
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closeResultSet(rs1);
+            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
     // TODO: Refactor
     public void deleteExpense(int expenseId) {
         Connection connection = null;
+        PreparedStatement ps1 = null;
+        PreparedStatement ps2 = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Delete from expensePersons table
             String deleteExpensePersonsQuery = "DELETE FROM expensePersons WHERE expense_id = ?";
-            PreparedStatement expensePersonsStatement = connection.prepareStatement(deleteExpensePersonsQuery);
-            expensePersonsStatement.setInt(1, expenseId);
+            ps1 = connection.prepareStatement(deleteExpensePersonsQuery);
+            ps1.setInt(1, expenseId);
 
             // Execute the statement
-            int expensePersonsRowsAffected = expensePersonsStatement.executeUpdate();
+            int expensePersonsRowsAffected = ps1.executeUpdate();
             if (expensePersonsRowsAffected > 0) {
                 System.out.println(expensePersonsRowsAffected + " row(s) deleted successfully from 'expensePersons' table.");
             } else {
@@ -630,11 +717,11 @@ public class ExpenseDAO {
             String deleteExpensesQuery = "DELETE FROM expenses WHERE expense_id = ?";
 
             // Prepare the statement
-            PreparedStatement expensesStatement = connection.prepareStatement(deleteExpensesQuery);
-            expensesStatement.setInt(1, expenseId);
+            ps2 = connection.prepareStatement(deleteExpensesQuery);
+            ps2.setInt(1, expenseId);
 
             // Execute the statement
-            int expensesRowsAffected = expensesStatement.executeUpdate();
+            int expensesRowsAffected = ps2.executeUpdate();
             if (expensesRowsAffected > 0) {
                 System.out.println(expensesRowsAffected + " row(s) deleted successfully from 'expenses' table.");
             } else {
@@ -647,20 +734,22 @@ public class ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
     public void displayAllExpenseTransactions() {
-        String query = "SELECT expense_date, establishment_name, expense_name, creditor_name, " +
-                "debtor_name, amount_owed, payment_status FROM combinedExpensePersons ORDER BY " +
-                "expense_date, establishment_name, expense_name, creditor_name, debtor_name";
+        String query = "SELECT expense_date, establishment_name, expense_name, creditor_name, " + "debtor_name, amount_owed, payment_status FROM combinedExpensePersons ORDER BY " + "expense_date, establishment_name, expense_name, creditor_name, debtor_name";
         Connection conn = null;
         Statement stmt = null;
+        ResultSet rs = null;
+
         try {
             conn = DatabaseConnectionManager.establishConnection();
             stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(query);
+            rs = stmt.executeQuery(query);
 
             // Get metadata to retrieve column names
             ResultSetMetaData metaData = rs.getMetaData();
@@ -681,13 +770,12 @@ public class ExpenseDAO {
                 System.out.println();
             }
 
-            // Close resources
-            rs.close();
-            stmt.close();
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(conn);
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closeStatement(stmt);
+            ResourcesUtils.closeConnection(conn);
         }
     }
 }
