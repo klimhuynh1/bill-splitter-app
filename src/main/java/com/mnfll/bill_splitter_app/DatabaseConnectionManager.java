@@ -1,5 +1,6 @@
 package com.mnfll.bill_splitter_app;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.Connection;
@@ -11,13 +12,13 @@ import java.util.Properties;
  * Responsible for managing database connections
  */
 public class DatabaseConnectionManager {
-    private static final String CONFIG_FILE_PATH = System.getProperty("user.dir") + "\\config.properties";
+    private static final File CONFIG_FILE = new File(System.getProperty("user.dir") + File.separator +  "config.properties");
     private static final String DB_URL_KEY = "db.url";
     private static final String DB_USERNAME_KEY = "db.username";
     private static final String DB_PASSWORD_KEY = "db.password";
     public static Properties loadConfig() {
         Properties config = new Properties();
-        try (FileInputStream fis = new FileInputStream(CONFIG_FILE_PATH)) {
+        try (FileInputStream fis = new FileInputStream(CONFIG_FILE)) {
             config.load(fis);
         } catch (IOException e) {
             e.printStackTrace();
