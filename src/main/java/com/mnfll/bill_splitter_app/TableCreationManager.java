@@ -8,24 +8,24 @@ import java.sql.Statement;
  * Create tables if they don't exist
  */
 public class TableCreationManager {
-    public void createPeopleTable() {
+    public void createUserTable() {
         Connection connection = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Create the 'people' table if it doesn't exist
-            String createTableQuery = "CREATE TABLE IF NOT EXISTS people (" +
-                    "person_id INT AUTO_INCREMENT PRIMARY KEY, " +
-                    "person_name VARCHAR(255)" +
+            // Create the `user` table if it doesn't exist
+            String createTableQuery = "CREATE TABLE IF NOT EXISTS user (" +
+                    "user_id INT AUTO_INCREMENT PRIMARY KEY, " +
+                    "user_name VARCHAR(255)" +
                     ")";
 
             Statement createTableStatement = connection.createStatement();
             int tableCreated = createTableStatement.executeUpdate(createTableQuery);
 
             if (tableCreated >= 0) {
-                System.out.println("Table `people` created successfully");
+                System.out.println("Table `user` created successfully");
             } else {
-                System.out.println("Failed to create table `people`");
+                System.out.println("Failed to create table `user`");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -34,13 +34,13 @@ public class TableCreationManager {
         }
     }
 
-    public void createExpensesTable() {
+    public void createExpenseTable() {
         Connection connection = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Create the table if it doesn't exist
-            String createTableQuery = "CREATE TABLE IF NOT EXISTS expenses (" +
+            String createTableQuery = "CREATE TABLE IF NOT EXISTS expense (" +
                     "expense_id INT AUTO_INCREMENT PRIMARY KEY, " +
                     "expense_date DATE NOT NULL, " +
                     "establishment_name VARCHAR(255) NOT NULL, " +
@@ -55,7 +55,7 @@ public class TableCreationManager {
             int tableCreated = createTableStatement.executeUpdate(createTableQuery);
 
             if (tableCreated >= 0) {
-                System.out.println("Table 'expenses' created successfully");
+                System.out.println("Table 'expense' created successfully");
             } else {
                 System.out.println("Failed to create table 'expenses'");
             }
@@ -65,30 +65,31 @@ public class TableCreationManager {
             ResourcesUtils.closeConnection(connection);
         }
     }
-    public void createExpensePersonsTable() {
+
+    public void createUserExpenseTable() {
         Connection connection = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Create the 'expensePersons' table if it doesn't exist
-            String createQuery = "CREATE TABLE IF NOT EXISTS expensePersons (" +
+            // Create the `user_expense` table if it doesn't exist
+            String createQuery = "CREATE TABLE IF NOT EXISTS user_expense (" +
                     "expense_id INT NOT NULL, " +
                     "creditor_id INT NOT NULL, " +
                     "debtor_id INT NOT NULL, " +
                     "amount_owed DECIMAL(10,2) NOT NULL, " +
                     "payment_status CHAR(1) DEFAULT 'n' CHECK (payment_status IN ('y', 'n')), " +
                     "PRIMARY KEY (expense_id, debtor_id), " +
-                    "FOREIGN KEY (expense_id) REFERENCES expenses(expense_id), " +
-                    "FOREIGN KEY (debtor_id) REFERENCES people(person_id)" +
+                    "FOREIGN KEY (expense_id) REFERENCES expense(expense_id), " +
+                    "FOREIGN KEY (debtor_id) REFERENCES user(user_id)" +
                     ")";
 
             Statement createTableStatement = connection.createStatement();
             int tableCreated = createTableStatement.executeUpdate(createQuery);
 
             if (tableCreated >= 0) {
-                System.out.println("Table 'expensePersons' created successfully");
+                System.out.println("Table 'user_expense' created successfully");
             } else {
-                System.out.println("Failed to create table 'expensePersons'");
+                System.out.println("Failed to create 'user_expense' table");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -97,22 +98,22 @@ public class TableCreationManager {
         }
     }
 
-    public void createCombinedExpensePersonsView() {
+    public void createCombinedUserExpenseView() {
         Connection connection = null;
-        String createViewQuery = "CREATE OR REPLACE VIEW combinedExpensePersons AS " +
-                "SELECT ep.expense_id, e.expense_date, e.establishment_name, e.expense_name, " +
-                "ep.creditor_id, p1.person_name AS creditor_name, " +
-                "ep.debtor_id, p2.person_name AS debtor_name, ep.amount_owed, ep.payment_status " +
-                "FROM expensePersons ep " +
-                "JOIN people p1 ON ep.creditor_id = p1.person_id " +
-                "JOIN people p2 ON ep.debtor_id = p2.person_id " +
-                "JOIN expenses e ON ep.expense_id = e.expense_id";
+        String createViewQuery = "CREATE OR REPLACE VIEW combined_user_expense AS " +
+                "SELECT ue.expense_id, e.expense_date, e.establishment_name, e.expense_name, " +
+                "ue.creditor_id, u1.user_name AS creditor_name, " +
+                "ue.debtor_id, u2.user_name AS debtor_name, ue.amount_owed, ue.payment_status " +
+                "FROM user_expense ue " +
+                "JOIN user u1 ON ue.creditor_id = u1.user_id " +
+                "JOIN user u2 ON ue.debtor_id = u2.user_id " +
+                "JOIN expense e ON ue.expense_id = e.expense_id";
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
             Statement statement = connection.createStatement();
             statement.execute(createViewQuery);
-            System.out.println("View `createCombinedExpensePersons` created successfully.");
+            System.out.println("View `combined_user_expense` created successfully.");
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {

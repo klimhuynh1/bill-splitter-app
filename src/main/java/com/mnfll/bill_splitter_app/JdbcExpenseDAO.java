@@ -12,18 +12,18 @@ import java.util.*;
  * Coordinate and utilise the other managers. This class remains the entry point for interacting with the data layer but
  * delegates tasks to the specialised class.
  */
-public class JdbcExpensesDAO implements ExpensesDAO {
-
+public class JdbcExpenseDAO implements ExpenseDAO {
+    // Add data into Expense table
     public int insertExpenseData(Expense expense) {
         Connection connection = null;
         int generatedExpenseId = -1;
-        JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
-        int creditorId = jdbcPeopleDAO.getPersonIdByName(expense.getCreditorName());
+        JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
+        int creditorId = jdbcUserDAO.getUserIdByName(expense.getCreditorName());
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Prepare the insert statement
-            String insertQuery = "INSERT INTO expenses (expense_date, expense_name, establishment_name, total_cost, " +
+            String insertQuery = "INSERT INTO expense (expense_date, establishment_name, expense_name, total_cost, " +
                     "split_count, creditor_id, creditor_name) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
@@ -42,7 +42,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
             int rowsInserted = statement.executeUpdate();
 
             if (rowsInserted > 0) {
-                System.out.println("Record inserted into `expenses` table successfully");
+                System.out.println("Record inserted into `expense` table successfully");
 
                 // Retrieves the expense_id that was generated
                 ResultSet generatedKeys = statement.getGeneratedKeys();
@@ -50,7 +50,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
                     generatedExpenseId = generatedKeys.getInt(1);
                 }
             } else {
-                System.out.println("Failed to insert into `expenses` table");
+                System.out.println("Failed to insert into `expense` table");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -70,7 +70,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
         try {
             conn = DatabaseConnectionManager.establishConnection();
             // Get the creditor_id for the
-            String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ? LIMIT 1";
+            String selectQuery = "SELECT creditor_id FROM expense WHERE expense_id = ? LIMIT 1";
             ps = conn.prepareStatement(selectQuery);
             ps.setInt(1, expenseId);
             rs = ps.executeQuery();
@@ -113,7 +113,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
                 }
             }
 
-            String updateStatement = "UPDATE expenses SET creditor_name = ? WHERE expense_id = ?";
+            String updateStatement = "UPDATE expense SET creditor_name = ? WHERE expense_id = ?";
             ps = conn.prepareStatement(updateStatement);
             ps.setString(1, newCreditorName);
             ps.setInt(2, expenseId);
@@ -140,7 +140,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
         ResultSet rs = null;
 
         try {
-            String query = "SELECT total_cost FROM expenses WHERE expense_id = ?";
+            String query = "SELECT total_cost FROM expense WHERE expense_id = ?";
             ps = connection.prepareStatement(query);
             ps.setInt(1, expenseId);
             rs = ps.executeQuery();
@@ -180,8 +180,8 @@ public class JdbcExpensesDAO implements ExpensesDAO {
                 }
             }
 
-            // Update establishment_name in `expenses` table based on expense_id
-            String query = "UPDATE expenses SET establishment_name = ? WHERE expense_id = ?";
+            // Update establishment_name in `expense` table based on expense_id
+            String query = "UPDATE expense SET establishment_name = ? WHERE expense_id = ?";
             ps = connection.prepareStatement(query);
 
             ps.setString(1, establishmentName);
@@ -226,8 +226,8 @@ public class JdbcExpensesDAO implements ExpensesDAO {
                 }
             }
 
-            // Update expense_cost in `expenses` table based on expense_id
-            String updateQuery = "UPDATE expenses SET total_cost = ? WHERE expense_id = ?";
+            // Update expense_cost in `expense` table based on expense_id
+            String updateQuery = "UPDATE expense SET total_cost = ? WHERE expense_id = ?";
             ps1 = conn.prepareStatement(updateQuery);
             ps1.setDouble(1, expenseCost);
             ps1.setInt(2, expenseId);
@@ -239,7 +239,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
             System.out.println("Rows affected: " + rowsAffected);
 
             // Get the number of people that splitting this expense cost
-            String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
+            String selectQuery = "SELECT split_count FROM expense WHERE expense_id = ?";
             ps2 = conn.prepareStatement(selectQuery);
             ps2.setInt(1, expenseId);
 
@@ -253,8 +253,8 @@ public class JdbcExpensesDAO implements ExpensesDAO {
             // Re-calculate the cost per person
             double newAmountOwed = expenseCost / splitCount;
 
-            // Update amount_owed in `expensePersons` table for each person
-            String updateAmountOwedQuery = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
+            // Update amount_owed in `user_expense` table for each person
+            String updateAmountOwedQuery = "UPDATE user_expense SET amount_owed = ? WHERE expense_id = ?";
             ps3 = conn.prepareStatement(updateAmountOwedQuery);
             ps3.setDouble(1, newAmountOwed);
             ps3.setInt(2, expenseId);
@@ -283,37 +283,37 @@ public class JdbcExpensesDAO implements ExpensesDAO {
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Delete from expensePersons table
-            String deleteExpensePersonsQuery = "DELETE FROM expensePersons WHERE expense_id = ?";
-            ps1 = connection.prepareStatement(deleteExpensePersonsQuery);
+            // Delete from user_expense table
+            String deleteUserExpenseQuery = "DELETE FROM user_expense WHERE expense_id = ?";
+            ps1 = connection.prepareStatement(deleteUserExpenseQuery);
             ps1.setInt(1, expenseId);
 
             // Execute the statement
-            int expensePersonsRowsAffected = ps1.executeUpdate();
-            if (expensePersonsRowsAffected > 0) {
-                System.out.println(expensePersonsRowsAffected + " row(s) deleted successfully from 'expensePersons' table.");
+            int user_expenseRowsAffected = ps1.executeUpdate();
+            if (user_expenseRowsAffected > 0) {
+                System.out.println(user_expenseRowsAffected + " row(s) deleted successfully from 'user_expense' table.");
             } else {
-                System.out.println("No rows deleted from 'expensePersons' table.");
+                System.out.println("No rows deleted from `user_expense` table.");
             }
 
-            // Delete from expenses table
-            String deleteExpensesQuery = "DELETE FROM expenses WHERE expense_id = ?";
+            // Delete from expense table
+            String deleteExpenseQuery = "DELETE FROM expense WHERE expense_id = ?";
 
             // Prepare the statement
-            ps2 = connection.prepareStatement(deleteExpensesQuery);
+            ps2 = connection.prepareStatement(deleteExpenseQuery);
             ps2.setInt(1, expenseId);
 
             // Execute the statement
-            int expensesRowsAffected = ps2.executeUpdate();
-            if (expensesRowsAffected > 0) {
-                System.out.println(expensesRowsAffected + " row(s) deleted successfully from 'expenses' table.");
+            int expenseRowsAffected = ps2.executeUpdate();
+            if (expenseRowsAffected > 0) {
+                System.out.println(expenseRowsAffected + " row(s) deleted successfully from `expense` table.");
             } else {
-                System.out.println("No rows deleted from 'expenses' table.");
+                System.out.println("No rows deleted from `expense` table.");
             }
 
-            JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
-            // Delete users that are no longer associated with any expenses
-            jdbcPeopleDAO.deleteOrphanUsers();
+            JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
+            // Delete users that are no longer associated with any expense
+            jdbcUserDAO.deleteOrphanUsers();
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -325,7 +325,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
     }
 
     public void displayAllExpenseTransactions() {
-        String query = "SELECT expense_date, establishment_name, expense_name, creditor_name, " + "debtor_name, amount_owed, payment_status FROM combinedExpensePersons ORDER BY " + "expense_date, establishment_name, expense_name, creditor_name, debtor_name";
+        String query = "SELECT expense_date, establishment_name, expense_name, creditor_name, " + "debtor_name, amount_owed, payment_status FROM combined_user_expense ORDER BY " + "expense_date, establishment_name, expense_name, creditor_name, debtor_name";
         Connection conn = null;
         Statement stmt = null;
         ResultSet rs = null;
@@ -369,7 +369,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
         ResultSet rs = null;
 
         try {
-            String selectQuery = "SELECT split_count FROM expenses WHERE expense_id = ?";
+            String selectQuery = "SELECT split_count FROM expense WHERE expense_id = ?";
             ps1 = conn.prepareStatement(selectQuery);
             ps1.setInt(1, expenseId);
             rs = ps1.executeQuery();
@@ -382,7 +382,7 @@ public class JdbcExpensesDAO implements ExpensesDAO {
                     splitCount = rs.getInt("split_count") - 1;
                 }
 
-                String updateQuery = "UPDATE expenses SET split_count = ? WHERE expense_id = ?";
+                String updateQuery = "UPDATE expense SET split_count = ? WHERE expense_id = ?";
                 ps2 = conn.prepareStatement(updateQuery);
                 ps2.setInt(1, splitCount);
                 ps2.setInt(2, expenseId);
@@ -436,8 +436,8 @@ public class JdbcExpensesDAO implements ExpensesDAO {
                 sqlDate = new Date(date.getTime());
             }
 
-            // Update expense_date in `expenses` table based on expense_id
-            String query = "UPDATE expenses SET expense_date = ? WHERE expense_id = ?";
+            // Update expense_date in `expense` table based on expense_id
+            String query = "UPDATE expense SET expense_date = ? WHERE expense_id = ?";
             ps = connection.prepareStatement(query);
 
             ps.setDate(1, sqlDate);
@@ -477,8 +477,8 @@ public class JdbcExpensesDAO implements ExpensesDAO {
                 }
             }
 
-            // Update expense_date in `expenses` table based on expense_id
-            String query = "UPDATE expenses SET expense_name = ? WHERE expense_id = ?";
+            // Update expense_date in `expense` table based on expense_id
+            String query = "UPDATE expense SET expense_name = ? WHERE expense_id = ?";
             ps = connection.prepareStatement(query);
 
             ps.setString(1, expenseName);

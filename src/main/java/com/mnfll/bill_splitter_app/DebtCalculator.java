@@ -19,7 +19,7 @@ public class DebtCalculator {
         try {
             connection = DatabaseConnectionManager.establishConnection();
             String selectQuery = "SELECT creditor_name, debtor_name, SUM(amount_owed) AS total_amount_owed " +
-                    "FROM combinedExpensePersons " +
+                    "FROM combined_user_expense " +
                     "WHERE creditor_name <> debtor_name AND payment_status = 'n' " +
                     "GROUP BY creditor_name, debtor_name";
 

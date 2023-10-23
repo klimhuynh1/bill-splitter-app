@@ -9,14 +9,14 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Scanner;
 
-public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
-    public void insertExpensePersonsData(Expense expense, List<Integer> personIds, int expenseId) {
+public class JdbcUserExpenseDAO implements UserExpenseDAO {
+    public void insertUserExpenseData(Expense expense, List<Integer> personIds, int expenseId) {
         Connection connection = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Retrieve creditor_id based on expenseId
-            String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ?";
+            String selectQuery = "SELECT creditor_id FROM expense WHERE expense_id = ?";
             PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
             preparedStatement.setInt(1, expenseId);
             ResultSet resultSet = preparedStatement.executeQuery();
@@ -27,7 +27,7 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
             }
 
             // Prepare the insert statement
-            String insertQuery = "INSERT INTO expensePersons (expense_id, creditor_id, debtor_id, amount_owed) " +
+            String insertQuery = "INSERT INTO user_expense (expense_id, creditor_id, debtor_id, amount_owed) " +
                     "VALUES (?, ?, ?, ?)";
 
             PreparedStatement insertTableStatement = connection.prepareStatement(insertQuery);
@@ -41,9 +41,9 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
                 int rowsInserted = insertTableStatement.executeUpdate();
 
                 if (rowsInserted > 0) {
-                    System.out.println("Record inserted into `expensePersons` table successfully");
+                    System.out.println("Record inserted into `user_expense` table successfully");
                 } else {
-                    System.out.println("Failed to insert into `expensePersons` table");
+                    System.out.println("Failed to insert into `user_expense` table");
                 }
             }
 
@@ -65,7 +65,7 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Create a SQL query
-            String sqlQuery = "SELECT debtor_id, debtor_name, amount_owed, payment_status FROM combinedExpensePersons WHERE expense_id = ?";
+            String sqlQuery = "SELECT debtor_id, debtor_name, amount_owed, payment_status FROM combinedUser_expense WHERE expense_id = ?";
 
             // Create a Statement object
             ps1 = connection.prepareStatement(sqlQuery);
@@ -95,7 +95,7 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
 
 
             // SQL query to update paymentStatus status
-            String updateQuery = "UPDATE expensePersons SET payment_status = ? WHERE expense_id = ? AND debtor_id = ?";
+            String updateQuery = "UPDATE user_expense SET payment_status = ? WHERE expense_id = ? AND debtor_id = ?";
 
             // Prepare the statement
             ps2 = connection.prepareStatement(updateQuery);
@@ -126,14 +126,14 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
             String newDebtorName = scanner.nextLine();
 
             if (InputValidator.isValidName(newDebtorName)) {
-                JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
-                JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
+                JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
+                JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
 
-                int personId = jdbcPeopleDAO.addNewPersonIfNotExists(conn, newDebtorName);
-                int splitCount = jdbcExpensesDAO.updateSplitCount(conn, expenseId, true);
+                int personId = jdbcUserDAO.addNewUserIfNotExist(conn, newDebtorName);
+                int splitCount = jdbcExpenseDAO.updateSplitCount(conn, expenseId, true);
 
-                if (isPersonAndSplitCountValid(personId, splitCount))  {
-                    double newAmountOwed = jdbcExpensesDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
+                if (isPersonAndSplitCountValid(personId, splitCount)) {
+                    double newAmountOwed = jdbcExpenseDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
 
                     if (newAmountOwed != -1) {
                         updateAmountOwed(conn, expenseId, newAmountOwed);
@@ -151,6 +151,7 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
     public boolean isPersonAndSplitCountValid(int personId, int splitCount) {
         return (personId != -1 && splitCount != -1);
     }
+
     public void removeDebtorName(int expenseId, Scanner scanner) {
         PreparedStatement ps = null;
         Connection conn = null;
@@ -159,19 +160,19 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
             conn = DatabaseConnectionManager.establishConnection();
             System.out.println("Enter the debtor name you would like to remove");
             String debtorName = scanner.nextLine();
-            JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
-            JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
+            JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
+            JdbcExpenseDAO jdbcExpensesDAO = new JdbcExpenseDAO();
 
             if (InputValidator.isValidName(debtorName)) {
-                int personId = jdbcPeopleDAO.getPersonIdByName(debtorName);
+                int personId = jdbcUserDAO.getUserIdByName(debtorName);
                 int creditorId = jdbcExpensesDAO.getCreditorIdByExpenseId(expenseId);
 
                 // FIXME: temporary fix, will implement either singleton pattern and/or command pattern
                 if (personId == creditorId) {
                     throw new IllegalArgumentException("You cannot remove debtor name as they are the creditor");
                 } else {
-                    // Otherwise, remove record in `expensePersons` table based on person_id and expense_id
-                    String query = "DELETE FROM expensePersons WHERE expense_id = ? AND person_id = ?";
+                    // Otherwise, remove record in `user_expense` table based on person_id and expense_id
+                    String query = "DELETE FROM user_expense WHERE expense_id = ? AND person_id = ?";
                     ps = conn.prepareStatement(query);
                     ps.setInt(1, expenseId);
                     ps.setInt(2, personId);
@@ -200,7 +201,7 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
         PreparedStatement ps = null;
 
         try {
-            String insertQuery = "INSERT INTO expensePersons (expense_id, person_id, amount_owed) VALUES (?, ?, ?)";
+            String insertQuery = "INSERT INTO user_expense (expense_id, person_id, amount_owed) VALUES (?, ?, ?)";
             ps = conn.prepareStatement(insertQuery);
             ps.setInt(1, expenseId);
             ps.setInt(2, personId);
@@ -219,7 +220,7 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
         PreparedStatement ps = null;
 
         try {
-            String query = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
+            String query = "UPDATE user_expense SET amount_owed = ? WHERE expense_id = ?";
             ps = conn.prepareStatement(query);
             ps.setDouble(1, newAmountOwed);
             ps.setInt(2, expenseId);

@@ -68,12 +68,12 @@ public class App {
     }
 
     public static void addExpense(Scanner scanner) throws ParseException {
-        // Create a list to store expenses
-        List<Expense> expenses = new ArrayList<>();
+        // Create a list to store expense
+        List<Expense> expenseList = new ArrayList<>();
 
-        boolean addMoreExpenses = true;
+        boolean addMoreExpense = true;
 
-        while (addMoreExpenses) {
+        while (addMoreExpense) {
             String dateString;
             Date date = null;
             String establishmentName = null;
@@ -135,14 +135,14 @@ public class App {
             }
 
             while (!isValidDebtorNumber) {
-                System.out.print("How many people are shared this item?");
+                System.out.print("How many user are shared this item?");
                 String userInput = scanner.nextLine();
 
                 if (InputValidator.isValidInteger(userInput)) {
                     numberOfDebtors = Integer.parseInt(userInput);
                     isValidDebtorNumber = true;
                 } else {
-                    System.out.println("Invalid number of people. Please enter a valid number of people. ");
+                    System.out.println("Invalid number of user. Please enter a valid number of user. ");
                 }
             }
 
@@ -171,19 +171,19 @@ public class App {
             String creditorName = debtorNames.get(creditorNameIndex - 1);
 
             Expense expense = new Expense(date, establishmentName, expenseName, expenseCost, debtorNames, creditorName);
-            expenses.add(expense);
+            expenseList.add(expense);
 
 
-            System.out.print("Add more expenses? [Y/n]");
+            System.out.print("Add more expense? [Y/n]");
             String moreItems = scanner.nextLine();
             if (!(moreItems.isEmpty() || moreItems.equalsIgnoreCase("y"))) {
-                addMoreExpenses = false;
+                addMoreExpense = false;
             }
         }
 
-        for (Expense expense : expenses) {
-            expense.displayExpense();
-            saveExpenseDataToDatabase(expense);
+        for (Expense expenseItem : expenseList) {
+            expenseItem.displayExpense();
+            saveExpenseDataToDatabase(expenseItem);
         }
     }
 
@@ -191,23 +191,23 @@ public class App {
         // Create a TableCreationManager to create all tables
         TableCreationManager tableCreationManager = new TableCreationManager();
 
-        // Create a JdbcPeopleDAO object to perform SQL operations to the People table
-        JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
+        // Create a JdbcUserDAO object to perform SQL operations to the User table
+        JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
 
         // Create a JdbcExpensePersonsDAO object to perform SQL operations to the ExpensePersons table
-        JdbcExpensePersonsDAO jdbcExpensePersonsDAO = new JdbcExpensePersonsDAO();
+        JdbcUserExpenseDAO jdbcUserExpenseDAO = new JdbcUserExpenseDAO();
 
-        // Create a JdbcExpenseDAO object to perform SQL operations to the Expenses table
-        JdbcExpensesDAO jdbcExpenseDAO = new JdbcExpensesDAO();
+        // Create a JdbcExpenseDAO object to perform SQL operations to the Expense table
+        JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
 
-        tableCreationManager.createPeopleTable();
-        tableCreationManager.createExpensesTable();
-        tableCreationManager.createExpensePersonsTable();
-        tableCreationManager.createCombinedExpensePersonsView();
+        tableCreationManager.createUserTable();
+        tableCreationManager.createExpenseTable();
+        tableCreationManager.createUserExpenseTable();
+        tableCreationManager.createCombinedUserExpenseView();
 
-        List<Integer> personIds = jdbcPeopleDAO.insertPeopleData(expense);
+        List<Integer> personIds = jdbcUserDAO.insertUserData(expense);
         int expenseId = jdbcExpenseDAO.insertExpenseData(expense);
-        jdbcExpensePersonsDAO.insertExpensePersonsData(expense, personIds, expenseId);
+        jdbcUserExpenseDAO.insertUserExpenseData(expense, personIds, expenseId);
     }
 
     // TODO: Validate the user inputs
@@ -239,38 +239,38 @@ public class App {
 
     //	TODO: Requires testing
     public static void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
-        JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
-        JdbcExpensePersonsDAO jdbcExpensePersonsDAO = new JdbcExpensePersonsDAO();
+        JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
+        JdbcUserExpenseDAO jdbcUserExpenseDAO = new JdbcUserExpenseDAO();
 
         switch (updateOption) {
             case 0:
                 break;
             case 1:
-                jdbcExpensesDAO.updateExpenseDate(expenseId, scanner);
+                jdbcExpenseDAO.updateExpenseDate(expenseId, scanner);
                 break;
             case 2:
-                jdbcExpensesDAO.updateExpenseEstablishmentName(expenseId, scanner);
+                jdbcExpenseDAO.updateExpenseEstablishmentName(expenseId, scanner);
                 break;
             case 3:
-                jdbcExpensesDAO.updateExpenseName(expenseId, scanner);
+                jdbcExpenseDAO.updateExpenseName(expenseId, scanner);
                 break;
             case 4:
-                jdbcExpensesDAO.updateExpenseCost(expenseId, scanner);
+                jdbcExpenseDAO.updateExpenseCost(expenseId, scanner);
                 break;
             case 5:
-                jdbcExpensePersonsDAO.addDebtorName(expenseId, scanner);
+                jdbcUserExpenseDAO.addDebtorName(expenseId, scanner);
                 break;
             case 6:
-                jdbcExpensePersonsDAO.removeDebtorName(expenseId, scanner);
+                jdbcUserExpenseDAO.removeDebtorName(expenseId, scanner);
                 break;
             case 7:
-                jdbcExpensesDAO.updateCreditorName(expenseId, scanner);
+                jdbcExpenseDAO.updateCreditorName(expenseId, scanner);
                 break;
             case 8:
-                jdbcExpensePersonsDAO.updatePaymentStatus(expenseId, scanner);
+                jdbcUserExpenseDAO.updatePaymentStatus(expenseId, scanner);
                 break;
             case 9:
-                jdbcExpensesDAO.deleteExpense(expenseId);
+                jdbcExpenseDAO.deleteExpense(expenseId);
                 break;
             default:
                 System.out.println("Invalid update option");
@@ -278,33 +278,33 @@ public class App {
     }
 
     public static void displayAllExpenseTransactions() {
-        JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
-        jdbcExpensesDAO.displayAllExpenseTransactions();
+        JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
+        jdbcExpenseDAO.displayAllExpenseTransactions();
     }
 
     public static void displayNetDebts() {
         try {
-            JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
+            JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
             DebtCalculator debtCalculator = new DebtCalculator();
             List<DebtRecord> debtRecords = debtCalculator.calculateDebt();
-            List<String> peopleNames = jdbcPeopleDAO.getAllPeopleNames();
+            List<String> userNames = jdbcUserDAO.getAllUserNames();
 
             if (debtRecords.isEmpty()) {
                 System.out.println("There are no debts.");
                 return;
             }
 
-            if (peopleNames.isEmpty()) {
-                System.out.println("There are no people.");
+            if (userNames.isEmpty()) {
+                System.out.println("There are no user.");
                 return;
             }
 
-            double[][] debtMatrix = debtCalculator.createDebtMatrix(debtRecords, peopleNames);
-            debtCalculator.displayDebtMatrix(debtMatrix, peopleNames);
+            double[][] debtMatrix = debtCalculator.createDebtMatrix(debtRecords, userNames);
+            debtCalculator.displayDebtMatrix(debtMatrix, userNames);
 
-            double[][] netDebts = debtCalculator.calculateNetDebts(debtMatrix, peopleNames);
+            double[][] netDebts = debtCalculator.calculateNetDebts(debtMatrix, userNames);
             System.out.println();
-            debtCalculator.displayNetDebts(netDebts, peopleNames);
+            debtCalculator.displayNetDebts(netDebts, userNames);
         } catch (Exception e) {
             System.err.println("An error occurred while displaying net debts: " + e.getMessage());
         }
@@ -319,14 +319,14 @@ public class App {
             stmt = conn.createStatement();
 
             // Drop each table separately
-            String dropTableExpensePersons = "DROP TABLE expensePersons";
-            String dropTableExpenses = "DROP TABLE expenses";
-            String dropTablePeople = "DROP TABLE people";
+            String dropTableUserExpense = "DROP TABLE user_expense";
+            String dropTableExpense = "DROP TABLE expense";
+            String dropTableUser = "DROP TABLE user";
 
             // Execute the drop statements
-            stmt.executeUpdate(dropTableExpensePersons);
-            stmt.executeUpdate(dropTableExpenses);
-            stmt.executeUpdate(dropTablePeople);
+            stmt.executeUpdate(dropTableUserExpense);
+            stmt.executeUpdate(dropTableExpense);
+            stmt.executeUpdate(dropTableUser);
 
             System.out.println("All tables dropped successfully. ");
         } catch (
@@ -347,10 +347,10 @@ public class App {
             stmt = conn.createStatement();
 
             // Drop each view separately
-            String dropViewCombinedExpensePersons = "DROP VIEW combinedExpensePersons";
+            String dropViewCombinedUserExpense = "DROP VIEW combined_user_expense";
 
             // Execute the drop statements
-            stmt.executeUpdate(dropViewCombinedExpensePersons);
+            stmt.executeUpdate(dropViewCombinedUserExpense);
 
             System.out.println("All views dropped successfully");
         } catch (SQLException e) {

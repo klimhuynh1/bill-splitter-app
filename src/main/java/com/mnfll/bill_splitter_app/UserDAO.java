@@ -1,5 +1,5 @@
 package com.mnfll.bill_splitter_app;
 
-public interface ExpensePersonsDAO {
+public interface UserDAO {
 
 }

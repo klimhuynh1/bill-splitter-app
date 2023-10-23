@@ -4,18 +4,19 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class JdbcPeopleDAO implements ExpensePersonsDAO {
-    public List<Integer> insertPeopleData(Expense expense) {
+public class JdbcUserDAO implements UserDAO {
+    // Add data into User table
+    public List<Integer> insertUserData(Expense expense) {
         List<Integer> generatedKeys = new ArrayList<>();
         Connection connection = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Check if the name already exists
-            String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
+            String selectQuery = "SELECT user_id FROM user WHERE user_name = ?";
 
-            // Add new records to the `people` table
-            String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
+            // Add new records to the `user` table
+            String insertQuery = "INSERT INTO user (user_name) VALUES (?)";
 
             for (String debtorName : expense.getDebtorNames()) {
                 // Check if the name already exists
@@ -24,8 +25,8 @@ public class JdbcPeopleDAO implements ExpensePersonsDAO {
                 ResultSet selectResultSet = selectStatement.executeQuery();
 
                 if (selectResultSet.next()) {
-                    // Name already exists, retrieve the person id
-                    generatedKeys.add(selectResultSet.getInt("person_id"));
+                    // Name already exists, retrieve the user id
+                    generatedKeys.add(selectResultSet.getInt("user_id"));
                 } else {
                     // Name doesn't exist, insert a new record
                     PreparedStatement statement = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
@@ -33,15 +34,15 @@ public class JdbcPeopleDAO implements ExpensePersonsDAO {
 
                     int rowsInserted = statement.executeUpdate();
                     if (rowsInserted > 0) {
-                        System.out.println("Record inserted into `people` table successfully");
+                        System.out.println("Record inserted into `user` table successfully");
 
-                        // Save the person_id to the ArrayList
+                        // Save the user_id to the ArrayList
                         ResultSet resultSet = statement.getGeneratedKeys();
                         if (resultSet.next()) {
                             generatedKeys.add(resultSet.getInt(1));
                         }
                     } else {
-                        System.out.println("Failed to insert into `people` table");
+                        System.out.println("Failed to insert into `user` table");
                     }
 
                 }
@@ -56,44 +57,44 @@ public class JdbcPeopleDAO implements ExpensePersonsDAO {
         return generatedKeys;
     }
 
-    public int getPersonIdByName(String personName) {
+    public int getUserIdByName(String userName) {
         Connection connection = null;
-        int personId = -1;
+        int userId = -1;
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Retrieve person_id given person_name
-            String selectQuery = "SELECT person_id FROM people WHERE person_name = ? LIMIT 1";
+            // Retrieve user_id given user_name
+            String selectQuery = "SELECT user_id FROM user WHERE user_name = ? LIMIT 1";
             PreparedStatement statement = connection.prepareStatement(selectQuery);
-            statement.setString(1, personName);
+            statement.setString(1, userName);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                personId = resultSet.getInt("person_id");
+                userId = resultSet.getInt("user_id");
             } else {
-                System.out.println("Person Id not found");
+                System.out.println("User Id not found");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
             DatabaseConnectionManager.closeConnection(connection);
         }
-        return personId;
+        return userId;
     }
 
-    public List<String> getAllPeopleNames() {
+    public List<String> getAllUserNames() {
         Statement stmt = null;
         ResultSet rs = null;
         Connection conn = null;
-        List<String> peopleNames = new ArrayList<>();
+        List<String> userNames = new ArrayList<>();
 
         try {
             conn = DatabaseConnectionManager.establishConnection();
-            String query = "SELECT person_name FROM people";
+            String query = "SELECT user_name FROM user";
             stmt = conn.createStatement();
             rs = stmt.executeQuery(query);
 
             while (rs.next()) {
-                String personName = rs.getString("person_name");
-                peopleNames.add(personName);
+                String userName = rs.getString("user_name");
+                userNames.add(userName);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -102,7 +103,7 @@ public class JdbcPeopleDAO implements ExpensePersonsDAO {
             ResourcesUtils.closeStatement(stmt);
             ResourcesUtils.closeConnection(conn);
         }
-        return peopleNames;
+        return userNames;
     }
 
     public void deleteOrphanUsers() {
@@ -115,31 +116,31 @@ public class JdbcPeopleDAO implements ExpensePersonsDAO {
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Delete from `people` table if they're not associated with any expenses
-            String selectQuery = "SELECT person_id from people";
+            // Delete from `user` table if they're not associated with any expense
+            String selectQuery = "SELECT user_id fROM user";
             ps1 = connection.prepareStatement(selectQuery);
             rs1 = ps1.executeQuery();
 
             // Iterate through the result set
             while (rs1.next()) {
-                int personId = rs1.getInt("person_id");
+                int userId = rs1.getInt("user_id");
 
-                // Check if the person_id exists in the person table
-                String checkQuery = "SELECT COUNT(*) FROM expensePersons WHERE person_id = ?";
+                // Check if the user_id exists in the user table
+                String checkQuery = "SELECT COUNT(*) FROM user WHERE user_id = ?";
                 ps2 = connection.prepareStatement(checkQuery);
-                ps2.setInt(1, personId);
+                ps2.setInt(1, userId);
                 rs2 = ps2.executeQuery();
 
                 int count = rs2.getInt(1);
 
                 if (count == 0) {
-                    // Delete the user from the people table
-                    String deleteQuery = "DELETE FROM people WHERE person_id = ?";
+                    // Delete the user from the user table
+                    String deleteQuery = "DELETE FROM user WHERE user_id = ?";
                     ps3 = connection.prepareStatement(deleteQuery);
-                    ps3.setInt(1, personId);
+                    ps3.setInt(1, userId);
                     int rowsAffected = ps3.executeUpdate();
 
-                    System.out.println(rowsAffected + " rows(s) for user ID: " + personId);
+                    System.out.println(rowsAffected + " rows(s) for user ID: " + userId);
                 }
             }
         } catch (SQLException e) {
@@ -154,28 +155,28 @@ public class JdbcPeopleDAO implements ExpensePersonsDAO {
         }
     }
 
-    public int addNewPersonIfNotExists(Connection conn, String debtorName) throws SQLException {
+    public int addNewUserIfNotExist(Connection conn, String debtorName) throws SQLException {
         PreparedStatement ps1 = null;
         PreparedStatement ps2 = null;
         ResultSet rs = null;
 
         try {
-            String selectQuery = "SELECT person_id FROM people WHERE person_name = ?";
+            String selectQuery = "SELECT user_id FROM user WHERE user_name = ?";
             ps1 = conn.prepareStatement(selectQuery);
             ps1.setString(1, debtorName);
             rs = ps1.executeQuery();
 
             if (rs.next()) {
-                // Person already exists, retrieve the person id
-                return rs.getInt("person_id");
+                // User already exists, retrieve the user id
+                return rs.getInt("user_id");
             } else {
-                // Person does not exist, create a new record
-                String insertQuery = "INSERT INTO people (person_name) VALUES (?)";
+                // User does not exist, create a new record
+                String insertQuery = "INSERT INTO user (user_name) VALUES (?)";
                 ps2 = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
                 ps2.setString(1, debtorName);
                 ps2.executeUpdate();
 
-                // Retrieve the generated person_id
+                // Retrieve the generated user_id
                 ResultSet generatedKeys = ps2.getGeneratedKeys();
                 if (generatedKeys.next()) {
                     return generatedKeys.getInt(1);
