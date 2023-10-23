@@ -11,7 +11,11 @@ import java.util.Scanner;
 
 public class App {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws ParseException {
+        mainMenu();
+    }
+
+    public static void mainMenu() throws ParseException {
         // Create a Scanner object to read user input
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
@@ -34,7 +38,7 @@ public class App {
                     addExpense(scanner);
                     break;
                 case "2":
-                    editExpense(scanner);
+                    editExpenseMenu(scanner);
                     break;
                 case "3":
                     displayAllExpenseTransactions();
@@ -58,11 +62,6 @@ public class App {
     public static void addExpense(Scanner scanner) throws ParseException {
         // Create a list to store expenses
         List<Expense> expenses = new ArrayList<>();
-        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
-        // Create a expenseDAO object to perform SQL operations
-        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
-        TableCreationManager tableCreationManager = new TableCreationManager();
-        DataInsertionManager dataInsertionManager = new DataInsertionManager(jdbcPersonDAO);
 
         boolean addMoreExpenses = true;
 
@@ -176,15 +175,38 @@ public class App {
 
         for (Expense expense : expenses) {
             expense.displayExpense();
-            expenseDAO.saveExpenseDataToDatabase(expense, tableCreationManager, dataInsertionManager);
+            saveExpenseDataToDatabase(expense);
         }
     }
 
+    public static void saveExpenseDataToDatabase(Expense expense) {
+        // Create a TableCreationManager to create all tables
+        TableCreationManager tableCreationManager = new TableCreationManager();
+
+        // Create a JdbcPeopleDAO object to perform SQL operations to the People table
+        JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
+
+        // Create a JdbcExpensePersonsDAO object to perform SQL operations to the ExpensePersons table
+        JdbcExpensePersonsDAO jdbcExpensePersonsDAO = new JdbcExpensePersonsDAO();
+
+        // Create a JdbcExpenseDAO object to perform SQL operations to the Expenses table
+        JdbcExpensesDAO jdbcExpenseDAO = new JdbcExpensesDAO();
+
+        tableCreationManager.createPeopleTable();
+        tableCreationManager.createExpensesTable();
+        tableCreationManager.createExpensePersonsTable();
+        tableCreationManager.createCombinedExpensePersonsView();
+
+        List<Integer> personIds = jdbcPeopleDAO.insertPeopleData(expense);
+        int expenseId = jdbcExpenseDAO.insertExpenseData(expense);
+        jdbcExpensePersonsDAO.insertExpensePersonsData(expense, personIds, expenseId);
+    }
+
     // TODO: Validate the user inputs
-    public static void editExpense(Scanner scanner) {
-        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
+    public static void editExpenseMenu(Scanner scanner) {
+        JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
         // Create a expenseDAO object to perform SQL operations
-        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
+        JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
         System.out.println("Enter the expense ID: ");
         int expenseId = Integer.parseInt(scanner.nextLine());
         System.out.println("What would you like to edit?");
@@ -202,25 +224,64 @@ public class App {
         int updateOption = Integer.parseInt(scanner.nextLine());
 
         try {
-            expenseDAO.updateExpense(expenseId, updateOption, scanner);
+            updateExpense(expenseId, updateOption, scanner);
         } catch (ParseException e) {
             e.printStackTrace();
         }
     }
+    //	TODO: Requires testing
+    public static void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
+        JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
+        JdbcExpensePersonsDAO jdbcExpensePersonsDAO = new JdbcExpensePersonsDAO();
+
+        switch (updateOption) {
+            case 0:
+                break;
+            case 1:
+                jdbcExpensesDAO.updateExpenseDate(expenseId, scanner);
+                break;
+            case 2:
+                jdbcExpensesDAO.updateExpenseEstablishmentName(expenseId, scanner);
+                break;
+            case 3:
+                jdbcExpensesDAO.updateExpenseName(expenseId, scanner);
+                break;
+            case 4:
+                jdbcExpensesDAO.updateExpenseCost(expenseId, scanner);
+                break;
+            case 5:
+                jdbcExpensePersonsDAO.addDebtorName(expenseId, scanner);
+                break;
+            case 6:
+                jdbcExpensePersonsDAO.removeDebtorName(expenseId, scanner);
+                break;
+            case 7:
+                jdbcExpensesDAO.updateCreditorName(expenseId, scanner);
+                break;
+            case 8:
+                jdbcExpensePersonsDAO.updatePaymentStatus(expenseId, scanner);
+                break;
+            case 9:
+                jdbcExpensesDAO.deleteExpense(expenseId);
+                break;
+            default:
+                System.out.println("Invalid update option");
+        }
+    }
+
+
 
     public static void displayAllExpenseTransactions() {
-        JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
-        ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
-        expenseDAO.displayAllExpenseTransactions();
+        JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
+        jdbcExpensesDAO.displayAllExpenseTransactions();
     }
 
     public static void displayNetDebts() {
         try {
-            JdbcPersonDAO jdbcPersonDAO = new JdbcPersonDAO();
-            ExpenseDAO expenseDAO = new ExpenseDAO(jdbcPersonDAO);
+            JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
             DebtCalculator debtCalculator = new DebtCalculator();
             List<DebtRecord> debtRecords = debtCalculator.calculateDebt();
-            List<String> peopleNames = expenseDAO.getAllPeopleNames();
+            List<String> peopleNames = jdbcPeopleDAO.getAllPeopleNames();
 
             if (debtRecords.isEmpty()) {
                 System.out.println("There are no debts.");
