@@ -73,9 +73,9 @@ public class JdbcExpensesDAO implements ExpensesDAO {
             String selectQuery = "SELECT creditor_id FROM expenses WHERE expense_id = ? LIMIT 1";
             ps = conn.prepareStatement(selectQuery);
             ps.setInt(1, expenseId);
-            ResultSet resultSet = ps.executeQuery();
-            if (resultSet.next()) {
-                creditorId = resultSet.getInt("creditor_id");
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                creditorId = rs.getInt("creditor_id");
                 System.out.println("creditor ID: " + creditorId);
             } else {
                 System.out.println("creditor Id not found");
@@ -143,10 +143,10 @@ public class JdbcExpensesDAO implements ExpensesDAO {
             String query = "SELECT total_cost FROM expenses WHERE expense_id = ?";
             ps = connection.prepareStatement(query);
             ps.setInt(1, expenseId);
-            ResultSet selectResultSet = ps.executeQuery();
+            rs = ps.executeQuery();
 
-            if (selectResultSet.next()) {
-                double expenseCost = selectResultSet.getDouble("total_cost");
+            if (rs.next()) {
+                double expenseCost = rs.getDouble("total_cost");
                 return expenseCost / splitCount;
             }
         } catch (SQLException e) {

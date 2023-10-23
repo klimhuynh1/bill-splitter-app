@@ -2,6 +2,9 @@ package com.mnfll.bill_splitter_app;
 
 import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -28,7 +31,8 @@ public class App {
             System.out.println("2. Edit an expense");
             System.out.println("3. Display transactions");
             System.out.println("4. Display net debt");
-            System.out.println("5. Exit");
+            System.out.println("5. Clear data");
+            System.out.println("6. Exit");
             System.out.println();
 
             String userInput = scanner.nextLine();
@@ -47,6 +51,10 @@ public class App {
                     displayNetDebts();
                     break;
                 case "5":
+                    dropAllTables();
+                    dropAllViews();
+                    break;
+                case "6":
                     running = false;
                     break;
                 default:
@@ -204,11 +212,10 @@ public class App {
 
     // TODO: Validate the user inputs
     public static void editExpenseMenu(Scanner scanner) {
-        JdbcPeopleDAO jdbcPeopleDAO = new JdbcPeopleDAO();
-        // Create a expenseDAO object to perform SQL operations
-        JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
         System.out.println("Enter the expense ID: ");
+
         int expenseId = Integer.parseInt(scanner.nextLine());
+
         System.out.println("What would you like to edit?");
         System.out.println("0. Cancel");
         System.out.println("1. Update expense date");
@@ -229,6 +236,7 @@ public class App {
             e.printStackTrace();
         }
     }
+
     //	TODO: Requires testing
     public static void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
         JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
@@ -269,8 +277,6 @@ public class App {
         }
     }
 
-
-
     public static void displayAllExpenseTransactions() {
         JdbcExpensesDAO jdbcExpensesDAO = new JdbcExpensesDAO();
         jdbcExpensesDAO.displayAllExpenseTransactions();
@@ -301,6 +307,57 @@ public class App {
             debtCalculator.displayNetDebts(netDebts, peopleNames);
         } catch (Exception e) {
             System.err.println("An error occurred while displaying net debts: " + e.getMessage());
+        }
+    }
+
+    public static void dropAllTables() {
+        Connection conn = null;
+        Statement stmt = null;
+
+        try {
+            conn = DatabaseConnectionManager.establishConnection();
+            stmt = conn.createStatement();
+
+            // Drop each table separately
+            String dropTableExpensePersons = "DROP TABLE expensePersons";
+            String dropTableExpenses = "DROP TABLE expenses";
+            String dropTablePeople = "DROP TABLE people";
+
+            // Execute the drop statements
+            stmt.executeUpdate(dropTableExpensePersons);
+            stmt.executeUpdate(dropTableExpenses);
+            stmt.executeUpdate(dropTablePeople);
+
+            System.out.println("All tables dropped successfully. ");
+        } catch (
+                SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeStatement(stmt);
+            ResourcesUtils.closeConnection(conn);
+        }
+    }
+
+    public static void dropAllViews() {
+        Connection conn = null;
+        Statement stmt = null;
+
+        try {
+            conn = DatabaseConnectionManager.establishConnection();
+            stmt = conn.createStatement();
+
+            // Drop each view separately
+            String dropViewCombinedExpensePersons = "DROP VIEW combinedExpensePersons";
+
+            // Execute the drop statements
+            stmt.executeUpdate(dropViewCombinedExpensePersons);
+
+            System.out.println("All views dropped successfully");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeStatement(stmt);
+            ResourcesUtils.closeConnection(conn);
         }
     }
 }

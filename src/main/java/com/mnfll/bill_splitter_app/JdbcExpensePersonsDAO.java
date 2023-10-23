@@ -134,8 +134,11 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
 
                 if (isPersonAndSplitCountValid(personId, splitCount))  {
                     double newAmountOwed = jdbcExpensesDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
-                    updateAmountOwed(conn, expenseId, newAmountOwed);
-                    addExpensePersonRecord(conn, expenseId, personId, newAmountOwed);
+
+                    if (newAmountOwed != -1) {
+                        updateAmountOwed(conn, expenseId, newAmountOwed);
+                        addExpensePersonRecord(conn, expenseId, personId, newAmountOwed);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -178,8 +181,11 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
                     int splitCount = jdbcExpensesDAO.updateSplitCount(conn, expenseId, false);
                     // Re-calculate cost per debtor
                     double newAmountOwed = jdbcExpensesDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
-                    // Update amount_owed based on expense_id
-                    updateAmountOwed(conn, expenseId, newAmountOwed);
+
+                    if (newAmountOwed != -1) {
+                        // Update amount_owed based on expense_id
+                        updateAmountOwed(conn, expenseId, newAmountOwed);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -190,17 +196,17 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
         }
     }
 
-    public void addExpensePersonRecord(Connection connection, int expenseId, int personId, double newAmountOwed) throws SQLException {
+    public void addExpensePersonRecord(Connection conn, int expenseId, int personId, double newAmountOwed) throws SQLException {
         PreparedStatement ps = null;
 
         try {
             String insertQuery = "INSERT INTO expensePersons (expense_id, person_id, amount_owed) VALUES (?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(insertQuery);
-            statement.setInt(1, expenseId);
-            statement.setInt(2, personId);
-            statement.setDouble(3, newAmountOwed);
+            ps = conn.prepareStatement(insertQuery);
+            ps.setInt(1, expenseId);
+            ps.setInt(2, personId);
+            ps.setDouble(3, newAmountOwed);
 
-            int rowsAffected = statement.executeUpdate();
+            int rowsAffected = ps.executeUpdate();
             System.out.println("Add row for new debtor name -- Rows affected: " + rowsAffected);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -209,13 +215,12 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
         }
     }
 
-    public void updateAmountOwed(Connection connection, int expenseId, double newAmountOwed) throws SQLException {
+    public void updateAmountOwed(Connection conn, int expenseId, double newAmountOwed) throws SQLException {
         PreparedStatement ps = null;
-        ResultSet rs = null;
 
         try {
             String query = "UPDATE expensePersons SET amount_owed = ? WHERE expense_id = ?";
-            ps = connection.prepareStatement(query);
+            ps = conn.prepareStatement(query);
             ps.setDouble(1, newAmountOwed);
             ps.setInt(2, expenseId);
 
@@ -224,7 +229,6 @@ public class JdbcExpensePersonsDAO implements ExpensePersonsDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closeResultSet(rs);
             ResourcesUtils.closePrepapredStatement(ps);
         }
     }
