@@ -3,10 +3,9 @@ package com.mnfll.bill_splitter_app;
 import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
 import java.sql.*;
-import java.sql.Date;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Scanner;
 
 /**
  * Coordinate and utilise the other managers. This class remains the entry point for interacting with the data layer but
