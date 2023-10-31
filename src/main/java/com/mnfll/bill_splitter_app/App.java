@@ -15,10 +15,10 @@ import java.util.Scanner;
 public class App {
 
     public static void main(String[] args) throws ParseException {
-        mainMenu();
+        displayMainMenu();
     }
 
-    public static void mainMenu() throws ParseException {
+    public static void displayMainMenu() throws ParseException {
         // Create a Scanner object to read user input
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
@@ -38,28 +38,16 @@ public class App {
             String userInput = scanner.nextLine();
 
             switch (userInput) {
-                case "1":
-                    addExpense(scanner);
-                    break;
-                case "2":
-                    editExpenseMenu(scanner);
-                    break;
-                case "3":
-                    displayAllExpenseTransactions();
-                    break;
-                case "4":
-                    displayNetDebts();
-                    break;
-                case "5":
+                case "1" -> addExpense(scanner);
+                case "2" -> displayEditExpenseMenu(scanner);
+                case "3" -> displayAllExpenseTransactions();
+                case "4" -> displayNetDebts();
+                case "5" -> {
                     dropAllTables();
                     dropAllViews();
-                    break;
-                case "6":
-                    running = false;
-                    break;
-                default:
-                    System.out.println("Invalid input. Please try again");
-                    break;
+                }
+                case "6" -> running = false;
+                default -> System.out.println("Invalid input. Please try again");
             }
         }
 
@@ -135,14 +123,14 @@ public class App {
             }
 
             while (!isValidDebtorNumber) {
-                System.out.print("How many user are shared this item?");
+                System.out.print("How many user are shared this item? ");
                 String userInput = scanner.nextLine();
 
                 if (InputValidator.isValidInteger(userInput)) {
                     numberOfDebtors = Integer.parseInt(userInput);
                     isValidDebtorNumber = true;
                 } else {
-                    System.out.println("Invalid number of user. Please enter a valid number of user. ");
+                    System.out.println("Invalid number of user. Please enter a valid number of user.");
                 }
             }
 
@@ -158,7 +146,7 @@ public class App {
                         System.out.println(name + " has been added");
                         isValidName = true;
                     } else {
-                        System.out.println("Invalid name. Please enter a valid name. ");
+                        System.out.println("Invalid name. Please enter a valid name.");
                     }
                 }
             }
@@ -174,7 +162,7 @@ public class App {
             expenseList.add(expense);
 
 
-            System.out.print("Add more expense? [Y/n]");
+            System.out.print("Add more expense? [Y/n] ");
             String moreItems = scanner.nextLine();
             if (!(moreItems.isEmpty() || moreItems.equalsIgnoreCase("y"))) {
                 addMoreExpense = false;
@@ -211,7 +199,7 @@ public class App {
     }
 
     // TODO: Validate the user inputs
-    public static void editExpenseMenu(Scanner scanner) {
+    public static void displayEditExpenseMenu(Scanner scanner) {
         System.out.println("Enter the expense ID: ");
 
         int expenseId = Integer.parseInt(scanner.nextLine());
