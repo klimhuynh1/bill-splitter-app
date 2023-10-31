@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  bill_splitter_db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bill_splitter_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+  bill_splitter_app:
+    build: .
+    image: bill_splitter_app
+    depends_on:
+      - bill_splitter_db
