@@ -87,10 +87,10 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
                 System.out.println("id: " + debtorId + ", name: " + debtorName + ", amount owed: " + amountOwed + ", payment status: " + paymentStatus);
             }
 
-            System.out.println("Enter the ID of debtor to modify payment status");
+            System.out.print("Enter the ID of debtor to modify payment status ");
             String debtorIdModify = scanner.nextLine();
 
-            System.out.println("Enter the new payment status");
+            System.out.print("Enter the new payment status ");
             String newPaymentStatus = scanner.nextLine();
 
 
@@ -158,7 +158,7 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
 
         try {
             conn = DatabaseConnectionManager.establishConnection();
-            System.out.println("Enter the debtor name you would like to remove");
+            System.out.print("Enter the debtor name you would like to remove ");
             String debtorName = scanner.nextLine();
             JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
             JdbcExpenseDAO jdbcExpensesDAO = new JdbcExpenseDAO();

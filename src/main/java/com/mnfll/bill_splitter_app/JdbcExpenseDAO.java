@@ -102,7 +102,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             String newCreditorName = "";
 
             while (!isValidName) {
-                System.out.println("Enter a new creditor name");
+                System.out.print("Enter a new creditor name ");
                 newCreditorName = scanner.nextLine();
 
                 if (InputValidator.isValidName(newCreditorName)) {
@@ -168,7 +168,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidEstablishmentName = false;
 
             while (!isValidEstablishmentName) {
-                System.out.println("Enter the new establishment name");
+                System.out.print("Enter the new establishment name ");
                 establishmentName = scanner.nextLine();
 
                 if (InputValidator.isValidEstablishmentName(establishmentName)) {
@@ -214,7 +214,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidExpenseCost = false;
 
             while (!isValidExpenseCost) {
-                System.out.println("Enter the new expense cost:");
+                System.out.print("Enter the new expense cost: ");
                 String userInput = scanner.nextLine();
 
                 if (InputValidator.isValidCost(userInput)) {
@@ -414,7 +414,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidDate = false;
 
             while (!isValidDate) {
-                System.out.println("Enter the new date [dd/MM/yyyy]");
+                System.out.print("Enter the new date [dd/MM/yyyy] ");
                 String dateString = scanner.nextLine();
 
 
@@ -466,7 +466,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
 
 
             while (!isValidExpenseName) {
-                System.out.println("Enter the new expense name");
+                System.out.print("Enter the new expense name ");
                 expenseName = scanner.nextLine();
 
                 if (InputValidator.isValidExpenseName(expenseName)) {
