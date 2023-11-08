@@ -14,11 +14,11 @@ import java.util.Scanner;
 
 public class App {
 
-    public static void main(String[] args) throws ParseException {
+    public static void main(String[] args) {
         displayMainMenu();
     }
 
-    public static void displayMainMenu() throws ParseException {
+    public static void displayMainMenu() {
         // Create a Scanner object to read user input
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
@@ -38,7 +38,13 @@ public class App {
             String userInput = scanner.nextLine();
 
             switch (userInput) {
-                case "1" -> addExpense(scanner);
+                case "1" -> {
+                    try {
+                        addExpense(scanner);
+                    } catch (ParseException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
                 case "2" -> displayEditExpenseMenu(scanner);
                 case "3" -> displayAllExpenseTransactions();
                 case "4" -> displayNetDebts();
