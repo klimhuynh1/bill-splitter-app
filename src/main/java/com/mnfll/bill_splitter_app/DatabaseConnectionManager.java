@@ -2,9 +2,7 @@ package com.mnfll.bill_splitter_app;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Properties;
 
 /**
@@ -48,6 +46,19 @@ public class DatabaseConnectionManager {
             throw new SQLException("Failed to establish a database connection.", e);
         }
         return conn;
+    }
+
+    public static boolean tableExistsSQL(Connection conn, String tableName) throws SQLException {
+        String query = "SELECT count(*) FROM information_schema.tables WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
+        PreparedStatement ps = conn.prepareStatement(query);
+
+        ps.setString(1, "bill_splitter_db");
+        ps.setString(2, tableName);
+
+        ResultSet rs = ps.executeQuery();
+        rs.next();
+
+        return rs.getInt(1) != 0;
     }
 
     public static void closeConnection(Connection connection) {

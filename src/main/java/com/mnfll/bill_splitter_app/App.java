@@ -2,9 +2,7 @@ package com.mnfll.bill_splitter_app;
 
 import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -312,15 +310,21 @@ public class App {
             conn = DatabaseConnectionManager.establishConnection();
             stmt = conn.createStatement();
 
-            // Drop each table separately
+            // Table drop queries
             String dropTableUserExpense = "DROP TABLE user_expense";
             String dropTableExpense = "DROP TABLE expense";
             String dropTableUser = "DROP TABLE user";
 
-            // Execute the drop statements
-            stmt.executeUpdate(dropTableUserExpense);
-            stmt.executeUpdate(dropTableExpense);
-            stmt.executeUpdate(dropTableUser);
+            // Check if the all the tables exists in the database
+            if (DatabaseConnectionManager.tableExistsSQL(conn, "user_expense")) {
+                stmt.execute(dropTableUserExpense);
+            }
+            if (DatabaseConnectionManager.tableExistsSQL(conn, "expense")) {
+                stmt.execute(dropTableExpense);
+            }
+            if (DatabaseConnectionManager.tableExistsSQL(conn, "user")) {
+                stmt.execute(dropTableUser);
+            }
 
             System.out.println("All tables dropped successfully. ");
         } catch (
@@ -340,13 +344,14 @@ public class App {
             conn = DatabaseConnectionManager.establishConnection();
             stmt = conn.createStatement();
 
-            // Drop each view separately
+            // View drop queries
             String dropViewCombinedUserExpense = "DROP VIEW combined_user_expense";
 
-            // Execute the drop statements
-            stmt.executeUpdate(dropViewCombinedUserExpense);
+            if (DatabaseConnectionManager.tableExistsSQL(conn, "combined_user_expense")) {
+                stmt.executeUpdate(dropViewCombinedUserExpense);
+            }
 
-            System.out.println("All views dropped successfully");
+            System.out.println("All views dropped successfully.");
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -354,4 +359,7 @@ public class App {
             ResourcesUtils.closeConnection(conn);
         }
     }
+
+    // Checks if table or view currently exist
+
 }
