@@ -43,6 +43,7 @@ public class App {
                 case "5" -> {
                     dropAllTables();
                     dropAllViews();
+                    createAllTables();
                 }
                 case "6" -> running = false;
                 default -> System.out.println("Invalid input. Please try again");
@@ -173,9 +174,18 @@ public class App {
         }
     }
 
-    public static void saveExpenseDataToDatabase(Expense expense) {
+    public static void createAllTables() {
         // Create a TableCreationManager to create all tables
         TableCreationManager tableCreationManager = new TableCreationManager();
+
+        tableCreationManager.createUserTable();
+        tableCreationManager.createExpenseTable();
+        tableCreationManager.createUserExpenseTable();
+        tableCreationManager.createCombinedUserExpenseView();
+    }
+
+    public static void saveExpenseDataToDatabase(Expense expense) {
+
 
         // Create a JdbcUserDAO object to perform SQL operations to the User table
         JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
@@ -186,10 +196,7 @@ public class App {
         // Create a JdbcExpenseDAO object to perform SQL operations to the Expense table
         JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
 
-        tableCreationManager.createUserTable();
-        tableCreationManager.createExpenseTable();
-        tableCreationManager.createUserExpenseTable();
-        tableCreationManager.createCombinedUserExpenseView();
+        createAllTables();
 
         List<Integer> personIds = jdbcUserDAO.insertUserData(expense);
         int expenseId = jdbcExpenseDAO.insertExpenseData(expense);
