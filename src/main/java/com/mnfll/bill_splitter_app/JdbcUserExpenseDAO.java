@@ -111,9 +111,9 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closePreparedStatement(ps2);
             ResourcesUtils.closeResultSet(rs1);
-            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closePreparedStatement(ps1);
             ResourcesUtils.closeConnection(connection);
         }
     }
@@ -192,7 +192,7 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
             ResourcesUtils.closeConnection(conn);
         }
     }
@@ -212,7 +212,7 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
         }
     }
 
@@ -230,7 +230,7 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
         }
     }
 }

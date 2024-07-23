@@ -83,7 +83,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             e.printStackTrace();
         } finally {
             ResourcesUtils.closeResultSet(rs);
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
             ResourcesUtils.closeConnection(conn);
         }
 
@@ -127,7 +127,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
             ResourcesUtils.closeConnection(conn);
         }
     }
@@ -152,7 +152,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             e.printStackTrace();
         } finally {
             ResourcesUtils.closeResultSet(rs);
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
         }
         return -1;
     }
@@ -194,7 +194,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
             ResourcesUtils.closeConnection(connection);
         }
     }
@@ -266,10 +266,10 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps3);
+            ResourcesUtils.closePreparedStatement(ps3);
             ResourcesUtils.closeResultSet(rs);
-            ResourcesUtils.closePrepapredStatement(ps2);
-            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closePreparedStatement(ps2);
+            ResourcesUtils.closePreparedStatement(ps1);
             ResourcesUtils.closeConnection(conn);
         }
     }
@@ -317,8 +317,8 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps2);
-            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closePreparedStatement(ps2);
+            ResourcesUtils.closePreparedStatement(ps1);
             ResourcesUtils.closeConnection(connection);
         }
     }
@@ -395,8 +395,8 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             e.printStackTrace();
         } finally {
             ResourcesUtils.closeResultSet(rs);
-            ResourcesUtils.closePrepapredStatement(ps2);
-            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closePreparedStatement(ps2);
+            ResourcesUtils.closePreparedStatement(ps1);
         }
 
         return -1;
@@ -450,7 +450,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
             ResourcesUtils.closeConnection(connection);
         }
     }
@@ -491,7 +491,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps);
+            ResourcesUtils.closePreparedStatement(ps);
             ResourcesUtils.closeConnection(connection);
         }
     }

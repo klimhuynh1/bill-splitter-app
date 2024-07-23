@@ -1,6 +1,10 @@
 package com.mnfll.bill_splitter_app;
 
 import java.sql.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import static com.mnfll.bill_splitter_app.LoggerUtils.logger;
 
 public class ResourcesUtils {
     public static void closeResultSet(ResultSet rs) {
@@ -9,7 +13,7 @@ public class ResourcesUtils {
                 rs.close();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to close ResultSet: {}", e.getMessage(), e);
         }
     }
 
@@ -19,17 +23,17 @@ public class ResourcesUtils {
                 stmt.close();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Failed to close Statement: {}", e.getMessage(), e);
         }
     }
 
-    public static void closePrepapredStatement(PreparedStatement pstmt) {
+    public static void closePreparedStatement(PreparedStatement pstmt) {
         try {
             if (pstmt != null) {
                 pstmt.close();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to close PreparedStatement: {}", e.getMessage(), e);
         }
     }
 
@@ -39,7 +43,7 @@ public class ResourcesUtils {
                 conn.close();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to close Connection: {}", e.getMessage(), e);
         }
     }
 }

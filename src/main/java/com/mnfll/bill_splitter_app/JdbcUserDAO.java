@@ -146,11 +146,11 @@ public class JdbcUserDAO implements UserDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePrepapredStatement(ps3);
+            ResourcesUtils.closePreparedStatement(ps3);
             ResourcesUtils.closeResultSet(rs2);
-            ResourcesUtils.closePrepapredStatement(ps2);
+            ResourcesUtils.closePreparedStatement(ps2);
             ResourcesUtils.closeResultSet(rs1);
-            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closePreparedStatement(ps1);
             ResourcesUtils.closeConnection(connection);
         }
     }
@@ -186,8 +186,8 @@ public class JdbcUserDAO implements UserDAO {
             e.printStackTrace();
         } finally {
             ResourcesUtils.closeResultSet(rs);
-            ResourcesUtils.closePrepapredStatement(ps2);
-            ResourcesUtils.closePrepapredStatement(ps1);
+            ResourcesUtils.closePreparedStatement(ps2);
+            ResourcesUtils.closePreparedStatement(ps1);
         }
 
         return -1;
