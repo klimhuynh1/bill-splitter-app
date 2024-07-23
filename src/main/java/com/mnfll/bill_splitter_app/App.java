@@ -2,9 +2,7 @@ package com.mnfll.bill_splitter_app;
 
 import com.mnfll.bill_splitter_app.utilities.InputValidator;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -301,50 +299,61 @@ public class App {
     public static void dropAllTables() {
         Connection conn = null;
         Statement stmt = null;
+        ResultSet rs = null;
 
         try {
             conn = DatabaseConnectionManager.establishConnection();
+            DatabaseMetaData metaData = conn.getMetaData();
             stmt = conn.createStatement();
 
-            // Drop each table separately
-            String dropTableUserExpense = "DROP TABLE user_expense";
-            String dropTableExpense = "DROP TABLE expense";
-            String dropTableUser = "DROP TABLE user";
+            String[] tableNames = {"user_expense", "expense", "user"};
 
-            // Execute the drop statements
-            stmt.executeUpdate(dropTableUserExpense);
-            stmt.executeUpdate(dropTableExpense);
-            stmt.executeUpdate(dropTableUser);
-
-            System.out.println("All tables dropped successfully. ");
-        } catch (
-                SQLException e) {
-            e.printStackTrace();
+            for (String tableName : tableNames) {
+                rs = metaData.getTables(null, null, tableName, null);
+                if (rs.next()) {
+                    String dropTableSQL = "DROP TABLE " + tableName;
+                    stmt.executeUpdate(dropTableSQL);
+                    System.out.println("Table " + tableName + " dropped successfully.");
+                } else {
+                    System.out.println("Table " + tableName + " does not exist.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error occurred while dropping tables: " + e.getMessage());
         } finally {
             ResourcesUtils.closeStatement(stmt);
+            ResourcesUtils.closeResultSet(rs);
             ResourcesUtils.closeConnection(conn);
         }
     }
 
     public static void dropAllViews() {
         Connection conn = null;
+        ResultSet rs = null;
         Statement stmt = null;
 
         try {
             conn = DatabaseConnectionManager.establishConnection();
+            DatabaseMetaData metaData = conn.getMetaData();
             stmt = conn.createStatement();
 
-            // Drop each view separately
-            String dropViewCombinedUserExpense = "DROP VIEW combined_user_expense";
+            String[] viewNames = {"combined_user_expense"};
 
-            // Execute the drop statements
-            stmt.executeUpdate(dropViewCombinedUserExpense);
-
-            System.out.println("All views dropped successfully");
+            for (String viewName : viewNames) {
+                rs = metaData.getTables(null, null, viewName, null);
+                if (rs.next()) {
+                    String dropTableSQL = "DROP VIEW " + viewName;
+                    stmt.executeUpdate(dropTableSQL);
+                    System.out.println("View " + viewName + " dropped successfully.");
+                } else {
+                    System.out.println("View " + viewName + " does not exist.");
+                }
+            }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Error occurred while dropping tables: " + e.getMessage());
         } finally {
             ResourcesUtils.closeStatement(stmt);
+            ResourcesUtils.closeResultSet(rs);
             ResourcesUtils.closeConnection(conn);
         }
     }
