@@ -168,7 +168,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidEstablishmentName = false;
 
             while (!isValidEstablishmentName) {
-                System.out.print("Enter the new establishment name (leave blank to remain unchanged)");
+                System.out.print("Enter the new establishment name (leave blank to remain unchanged) ");
                 establishmentName = scanner.nextLine();
 
                 // Leaving establishment name blank will return to previous options
@@ -216,7 +216,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidExpenseCost = false;
 
             while (!isValidExpenseCost) {
-                System.out.print("Enter the new expense cost: (leave blank to remain unchanged)");
+                System.out.print("Enter the new expense cost: (leave blank to remain unchanged) ");
                 String userInput = scanner.nextLine();
 
                 if (InputValidator.isValidCost(userInput)) {
@@ -234,10 +234,10 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             ps1.setInt(2, expenseId);
 
             // Execute the update query
-            int rowsAffected = ps1.executeUpdate();
+            int rowsUpdatedExpense = ps1.executeUpdate();
 
             // Check the number of rows affected
-            System.out.println("Rows affected: " + rowsAffected);
+            System.out.println("Rows updated: " + rowsUpdatedExpense);
 
             // Get the number of people that splitting this expense cost
             String selectQuery = "SELECT split_count FROM expense WHERE expense_id = ?";
@@ -261,10 +261,10 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             ps3.setInt(2, expenseId);
 
             // Execute the update query
-            int rowsUpdated = ps3.executeUpdate();
+            int rowsUpdatedUserExpense = ps3.executeUpdate();
 
             // Check the number of rows updated
-            System.out.println("Rows updated: " + rowsUpdated);
+            System.out.println("Rows updated: " + rowsUpdatedUserExpense);
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -290,9 +290,9 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             ps1.setInt(1, expenseId);
 
             // Execute the statement
-            int user_expenseRowsAffected = ps1.executeUpdate();
-            if (user_expenseRowsAffected > 0) {
-                System.out.println(user_expenseRowsAffected + " row(s) deleted successfully from 'user_expense' table.");
+            int rowsDeleteUserExpense = ps1.executeUpdate();
+            if (rowsDeleteUserExpense > 0) {
+                System.out.println(rowsDeleteUserExpense + " row(s) deleted successfully from 'user_expense' table.");
             } else {
                 System.out.println("No rows deleted from `user_expense` table.");
             }
@@ -305,9 +305,9 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             ps2.setInt(1, expenseId);
 
             // Execute the statement
-            int expenseRowsAffected = ps2.executeUpdate();
-            if (expenseRowsAffected > 0) {
-                System.out.println(expenseRowsAffected + " row(s) deleted successfully from `expense` table.");
+            int rowsDeleteExpense = ps2.executeUpdate();
+            if (rowsDeleteExpense > 0) {
+                System.out.println(rowsDeleteExpense + " row(s) deleted successfully from `expense` table.");
             } else {
                 System.out.println("No rows deleted from `expense` table.");
             }
@@ -506,8 +506,8 @@ public class JdbcExpenseDAO implements ExpenseDAO {
                 ps2.setInt(1, splitCount);
                 ps2.setInt(2, expenseId);
 
-                int rowsAffected = ps2.executeUpdate();
-                System.out.println("Update split_count -- Rows affected: " + rowsAffected);
+                int rowsUpdateExpense = ps2.executeUpdate();
+                System.out.println("Update split_count -- Rows affected: " + rowsUpdateExpense);
 
                 return splitCount;
             }
@@ -534,7 +534,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidDate = false;
 
             while (!isValidDate) {
-                System.out.print("Enter the new date [dd/MM/yyyy] (leave blank to remain unchanged)");
+                System.out.print("Enter the new date [dd/MM/yyyy] (leave blank to remain unchanged) ");
                 String dateString = scanner.nextLine();
 
 
@@ -588,7 +588,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
 
 
             while (!isValidExpenseName) {
-                System.out.print("Enter the new expense name (leave blank to remain unchanged)");
+                System.out.print("Enter the new expense name (leave blank to remain unchanged). ");
                 expenseName = scanner.nextLine();
 
                 if (expenseName.trim().isBlank()) {

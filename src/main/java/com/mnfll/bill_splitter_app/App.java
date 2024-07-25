@@ -21,7 +21,8 @@ public class App {
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
 
-        System.out.println("Welcome to the bill splitter app");
+        System.out.println("Welcome to the bill splitter app.");
+
         while (running) {
             System.out.println();
             System.out.println("Please select an option:");
@@ -43,16 +44,23 @@ public class App {
                 case "4" -> displayCombinedExpenseTransactions();
                 case "5" -> displayNetDebts();
                 case "6" -> {
-                    dropAllTables();
-                    dropAllViews();
-                    createAllTables();
+                    System.out.print("Are you sure you want to drop the table? This action cannot be undone. [y/N]: ");
+                    String confirmDrop = scanner.nextLine().trim().toLowerCase();
+                    if (!confirmDrop.isBlank() || confirmDrop.equals("n") || confirmDrop.equals("no")) {
+                        dropAllTables();
+                        dropAllViews();
+                        createAllTables();
+                    } else {
+                        System.out.println("Operation cancelled. The data was not cleared.");
+                        System.out.println();
+                    }
                 }
                 case "7" -> running = false;
-                default -> System.out.println("Invalid input. Please try again");
+                default -> System.out.println("Invalid input. Please try again.");
             }
         }
 
-        System.out.println("Thank you for using the bill splitter app");
+        System.out.println("Thank you for using the bill splitter app.");
         scanner.close();
     }
 
@@ -67,8 +75,8 @@ public class App {
             Date date = null;
             String establishmentName = null;
             String expenseName = null;
-            double expenseCost = 0;
-            int numberOfDebtors = 0;
+            double expenseCostDouble = 0;
+            int numberOfDebtorsInteger = 0;
             List<String> debtorNames = new ArrayList<>();
             boolean isValidDate = false;
             boolean isValidEstablishmentName = false;
@@ -78,10 +86,10 @@ public class App {
             boolean isValidName;
 
             while (!isValidDate) {
-                System.out.print("Enter the date [dd/MM/yyyy] ");
-                dateString = scanner.nextLine();
+                System.out.print("Enter the date [dd/mm/yyyy] ");
+                dateString = scanner.nextLine().trim();
 
-                if (dateString.trim().isBlank()) {
+                if (dateString.isBlank()) {
                     return;
                 }
 
@@ -95,7 +103,7 @@ public class App {
 
             while (!isValidEstablishmentName) {
                 System.out.print("Enter the establishment name ");
-                establishmentName = scanner.nextLine();
+                establishmentName = scanner.nextLine().trim();
 
                 if (InputValidator.isValidEstablishmentName(establishmentName)) {
                     isValidEstablishmentName = true;
@@ -106,7 +114,7 @@ public class App {
 
             while (!isValidExpenseName) {
                 System.out.print("Enter the item name ");
-                expenseName = scanner.nextLine();
+                expenseName = scanner.nextLine().trim();
 
                 if (InputValidator.isValidExpenseName(expenseName)) {
                     isValidExpenseName = true;
@@ -117,10 +125,10 @@ public class App {
 
             while (!isValidExpenseCost) {
                 System.out.print("Enter the item total cost ");
-                String userInput = scanner.nextLine();
+                String expenseCostString = scanner.nextLine().trim();
 
-                if (InputValidator.isValidCost(userInput)) {
-                    expenseCost = Double.parseDouble(userInput);
+                if (InputValidator.isValidCost(expenseCostString)) {
+                    expenseCostDouble = Double.parseDouble(expenseCostString);
                     isValidExpenseCost = true;
                 } else {
                     System.out.println("Invalid expense cost. Please enter a valid expense cost. ");
@@ -129,10 +137,10 @@ public class App {
 
             while (!isValidDebtorNumber) {
                 System.out.print("How many user are shared this item? ");
-                String userInput = scanner.nextLine();
+                String numberOfDebtorsString = scanner.nextLine().trim();
 
-                if (InputValidator.isValidInteger(userInput)) {
-                    numberOfDebtors = Integer.parseInt(userInput);
+                if (InputValidator.isValidInteger(numberOfDebtorsString)) {
+                    numberOfDebtorsInteger = Integer.parseInt(numberOfDebtorsString);
                     isValidDebtorNumber = true;
                 } else {
                     System.out.println("Invalid number of user. Please enter a valid number of user.");
@@ -140,7 +148,7 @@ public class App {
             }
 
             String name;
-            for (int i = 0; i < numberOfDebtors; i++) {
+            for (int i = 0; i < numberOfDebtorsInteger; i++) {
                 isValidName = false;
                 while (!isValidName) {
                     System.out.print("Enter name " + (i + 1) + " ");
@@ -163,13 +171,13 @@ public class App {
             int creditorNameIndex = Integer.parseInt(scanner.nextLine());
             String creditorName = debtorNames.get(creditorNameIndex - 1);
 
-            Expense expense = new Expense(date, establishmentName, expenseName, expenseCost, debtorNames, creditorName);
+            Expense expense = new Expense(date, establishmentName, expenseName, expenseCostDouble, debtorNames, creditorName);
             expenseList.add(expense);
 
 
             System.out.print("Add more expense? [Y/n] ");
-            String moreItems = scanner.nextLine();
-            if (!(moreItems.isEmpty() || moreItems.equalsIgnoreCase("y"))) {
+            String moreItems = scanner.nextLine().trim().toLowerCase();
+            if (!(moreItems.isEmpty() || moreItems.equals("y") || moreItems.equals("yes"))) {
                 addMoreExpense = false;
             }
         }
@@ -192,7 +200,6 @@ public class App {
 
     public static void saveExpenseDataToDatabase(Expense expense) {
 
-
         // Create a JdbcUserDAO object to perform SQL operations to the User table
         JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
 
@@ -208,85 +215,110 @@ public class App {
         int expenseId = jdbcExpenseDAO.insertExpenseData(expense);
         jdbcUserExpenseDAO.insertUserExpenseData(expense, personIds, expenseId);
     }
-
-    // TODO: Validate the user inputs
+    
     public static void displayEditExpenseMenu(Scanner scanner) {
 
         System.out.println("Displaying all transactions...");
         System.out.println();
         displayCombinedExpenseTransactions();
 
-        System.out.println("Enter the expense ID: ");
-        String expenseIdString = scanner.nextLine();
-        int expenseId = Integer.parseInt(expenseIdString);
+        int expenseId;
 
-        if (expenseIdExists(expenseId) && !expenseIdString.trim().isBlank()) {
-            System.out.println("Displaying all transaction with expense ID: " + expenseId + " ...");
-            System.out.println();
-            displayFilteredCombinedExpenseTransactions(expenseId);
-            System.out.println();
+        while (true) {
+            System.out.println("Enter the expense ID: ");
+            String expenseIdString = scanner.nextLine().trim();
 
-            System.out.println("What would you like to edit?");
-            System.out.println("0. Cancel");
-            System.out.println("1. Update expense date");
-            System.out.println("2. Update establishment name");
-            System.out.println("3. Update expense item name");
-            System.out.println("4. Update expense amount");
-            System.out.println("5. Add debtor");
-            System.out.println("6. Remove debtor");
-            System.out.println("7. Update creditor name");
-            System.out.println("8. Update payment status");
-            System.out.println("9. Delete expense");
-
-
-            String updateOption = scanner.nextLine();
-
-            try {
-                updateExpense(expenseId, updateOption, scanner);
-            } catch (ParseException e) {
-                e.printStackTrace();
+            if (expenseIdString.isBlank()) {
+                System.out.println("Expense ID cannot be empty. Please try again.");
+                continue;
             }
-        } else {
-            System.out.println("Invalid expense id");
+            try {
+                expenseId = Integer.parseInt(expenseIdString);
+                if (expenseIdExists(expenseId)) {
+                    break;
+                }
+                else {
+                    System.out.println("Invalid input. Please enter a valid expense ID");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a valid number");
+            }
+        }
+
+        System.out.println("Displaying all transaction with expense ID: " + expenseId + " ...");
+        System.out.println();
+        displayFilteredCombinedExpenseTransactions(expenseId);
+        System.out.println();
+
+        System.out.println("What would you like to edit?");
+        System.out.println("1. Update expense date");
+        System.out.println("2. Update establishment name");
+        System.out.println("3. Update expense item name");
+        System.out.println("4. Update expense cost");
+        System.out.println("5. Add debtor");
+        System.out.println("6. Remove debtor");
+        System.out.println("7. Update creditor name");
+        System.out.println("8. Update payment status");
+        System.out.println("9. Delete expense");
+        System.out.println("0. Cancel");
+
+        try {
+            updateExpense(expenseId, scanner);
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
     }
 
     //	TODO: Requires testing
-    public static void updateExpense(int expenseId, String updateOption, Scanner scanner) throws ParseException {
+    public static void updateExpense(int expenseId, Scanner scanner) throws ParseException {
         JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
         JdbcUserExpenseDAO jdbcUserExpenseDAO = new JdbcUserExpenseDAO();
-        boolean running = true;
 
-        switch (updateOption) {
-            case "1":
-                jdbcExpenseDAO.updateExpenseDate(expenseId, scanner);
-                break;
-            case "2":
-                jdbcExpenseDAO.updateExpenseEstablishmentName(expenseId, scanner);
-                break;
-            case "3":
-                jdbcExpenseDAO.updateExpenseName(expenseId, scanner);
-                break;
-            case "4":
-                jdbcExpenseDAO.updateExpenseCost(expenseId, scanner);
-                break;
-            case "5":
-                jdbcUserExpenseDAO.addDebtorName(expenseId, scanner);
-                break;
-            case "6":
-                jdbcUserExpenseDAO.removeDebtorName(expenseId, scanner);
-                break;
-            case "7":
-                jdbcExpenseDAO.updateCreditorName(expenseId, scanner);
-                break;
-            case "8":
-                jdbcUserExpenseDAO.updatePaymentStatus(expenseId, scanner);
-                break;
-            case "9":
-                jdbcExpenseDAO.deleteExpense(expenseId);
-                break;
-            default:
-                System.out.println("Invalid update option. Please provide a number between 1 and 9");
+        while (true) {
+            int updateOption;
+
+            try {
+                updateOption = Integer.parseInt(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a valid number.");
+                continue;
+            }
+
+            switch (updateOption) {
+                case 0:
+                    break;
+                case 1:
+                    jdbcExpenseDAO.updateExpenseDate(expenseId, scanner);
+                    break;
+                case 2:
+                    jdbcExpenseDAO.updateExpenseEstablishmentName(expenseId, scanner);
+                    break;
+                case 3:
+                    jdbcExpenseDAO.updateExpenseName(expenseId, scanner);
+                    break;
+                case 4:
+                    jdbcExpenseDAO.updateExpenseCost(expenseId, scanner);
+                    break;
+                case 5:
+                    jdbcUserExpenseDAO.addDebtorName(expenseId, scanner);
+                    break;
+                case 6:
+                    jdbcUserExpenseDAO.removeDebtorName(expenseId, scanner);
+                    break;
+                case 7:
+                    jdbcExpenseDAO.updateCreditorName(expenseId, scanner);
+                    break;
+                case 8:
+                    jdbcUserExpenseDAO.updatePaymentStatus(expenseId, scanner);
+                    break;
+                case 9:
+                    jdbcExpenseDAO.deleteExpense(expenseId);
+                    break; // breaks the switch case
+                default:
+                    System.out.println("Invalid update option. Please provide a number between 0 and 9.");
+                    continue;
+            }
+            break; // breaks the while loop
         }
     }
 
