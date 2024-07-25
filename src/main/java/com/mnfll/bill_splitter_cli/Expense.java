@@ -56,8 +56,8 @@ public class Expense {
         System.out.println("Establishment: " + getEstablishmentName());
         System.out.println("Item: " + getItemName());
         System.out.println("Cost: " + getItemCost());
-        System.out.println("Debtor Names " + getDebtorNames());
-        System.out.println("Creditor Name: " + getCreditorName());
+        System.out.println("Debtors " + getDebtorNames());
+        System.out.println("Creditor: " + getCreditorName());
         System.out.println();
     }
 }
