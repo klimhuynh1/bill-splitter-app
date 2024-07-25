@@ -11,7 +11,7 @@ public class InputValidator {
     // Compiles the patterns only once, improves performance
 
     private static final Pattern PERSON_NAME_PATTERN = Pattern.compile("^[\\p{L} .'-]{1,255}$");
-    private static final Pattern ESTABLISHMENT_NAME_PATTERN = Pattern.compile("^[\\p{L}0-9 .,'&#\\-!]{1,255}$");
+    private static final Pattern ESTABLISHMENT_NAME_PATTERN = Pattern.compile("^[\\p{L}0-9 .,'&#\\-!/]{1,255}$");
 
     public static boolean isValidDate(String input) {
         try {
