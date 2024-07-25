@@ -10,7 +10,7 @@ public class InputValidator {
     private static final String DATE_FORMAT = "dd/MM/yyyy";
     // Compiles the pattern only once, improves performance
     // Names and establishment names use the same pattern
-    private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z0-9\\s]+$");
+    private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z0-9\\s'-]+$");
 
     public static boolean isValidDate(String input) {
         try {

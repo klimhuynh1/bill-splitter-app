@@ -27,10 +27,11 @@ public class App {
             System.out.println("Please select an option:");
             System.out.println("1. Add an expense");
             System.out.println("2. Edit an expense");
-            System.out.println("3. Display transactions");
-            System.out.println("4. Display net debt");
-            System.out.println("5. Clear data");
-            System.out.println("6. Exit");
+            System.out.println("3. Display expenses");
+            System.out.println("4. Display combined expenses");
+            System.out.println("5. Display net debt");
+            System.out.println("6. Clear data");
+            System.out.println("7. Exit");
             System.out.println();
 
             String userInput = scanner.nextLine();
@@ -38,14 +39,15 @@ public class App {
             switch (userInput) {
                 case "1" -> addExpense(scanner);
                 case "2" -> displayEditExpenseMenu(scanner);
-                case "3" -> displayAllExpenseTransactions();
-                case "4" -> displayNetDebts();
-                case "5" -> {
+                case "3" -> displayExpenseTransactions();
+                case "4" -> displayCombinedExpenseTransactions();
+                case "5" -> displayNetDebts();
+                case "6" -> {
                     dropAllTables();
                     dropAllViews();
                     createAllTables();
                 }
-                case "6" -> running = false;
+                case "7" -> running = false;
                 default -> System.out.println("Invalid input. Please try again");
             }
         }
@@ -78,6 +80,10 @@ public class App {
             while (!isValidDate) {
                 System.out.print("Enter the date [dd/MM/yyyy] ");
                 dateString = scanner.nextLine();
+
+                if (dateString.trim().isBlank()) {
+                    return;
+                }
 
                 if (InputValidator.isValidDate(dateString)) {
                     date = new SimpleDateFormat("dd/MM/yyyy").parse(dateString);
@@ -205,74 +211,103 @@ public class App {
 
     // TODO: Validate the user inputs
     public static void displayEditExpenseMenu(Scanner scanner) {
+
+        System.out.println("Displaying all transactions...");
+        System.out.println();
+        displayCombinedExpenseTransactions();
+
         System.out.println("Enter the expense ID: ");
+        String expenseIdString = scanner.nextLine();
+        int expenseId = Integer.parseInt(expenseIdString);
 
-        int expenseId = Integer.parseInt(scanner.nextLine());
+        if (expenseIdExists(expenseId) && !expenseIdString.trim().isBlank()) {
+            System.out.println("Displaying all transaction with expense ID: " + expenseId + " ...");
+            System.out.println();
+            displayFilteredCombinedExpenseTransactions(expenseId);
+            System.out.println();
 
-        System.out.println("What would you like to edit?");
-        System.out.println("0. Cancel");
-        System.out.println("1. Update expense date");
-        System.out.println("2. Update establishment name");
-        System.out.println("3. Update expense name");
-        System.out.println("4. Update expense cost");
-        System.out.println("5. Add debtor name");
-        System.out.println("6. Remove debtor name");
-        System.out.println("7. Update creditor name");
-        System.out.println("8. Update payment status");
-        System.out.println("9. Delete expense");
+            System.out.println("What would you like to edit?");
+            System.out.println("0. Cancel");
+            System.out.println("1. Update expense date");
+            System.out.println("2. Update establishment name");
+            System.out.println("3. Update expense item name");
+            System.out.println("4. Update expense amount");
+            System.out.println("5. Add debtor");
+            System.out.println("6. Remove debtor");
+            System.out.println("7. Update creditor name");
+            System.out.println("8. Update payment status");
+            System.out.println("9. Delete expense");
 
-        int updateOption = Integer.parseInt(scanner.nextLine());
 
-        try {
-            updateExpense(expenseId, updateOption, scanner);
-        } catch (ParseException e) {
-            e.printStackTrace();
+            String updateOption = scanner.nextLine();
+
+            try {
+                updateExpense(expenseId, updateOption, scanner);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Invalid expense id");
         }
     }
 
     //	TODO: Requires testing
-    public static void updateExpense(int expenseId, int updateOption, Scanner scanner) throws ParseException {
+    public static void updateExpense(int expenseId, String updateOption, Scanner scanner) throws ParseException {
         JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
         JdbcUserExpenseDAO jdbcUserExpenseDAO = new JdbcUserExpenseDAO();
+        boolean running = true;
 
         switch (updateOption) {
-            case 0:
-                break;
-            case 1:
+            case "1":
                 jdbcExpenseDAO.updateExpenseDate(expenseId, scanner);
                 break;
-            case 2:
+            case "2":
                 jdbcExpenseDAO.updateExpenseEstablishmentName(expenseId, scanner);
                 break;
-            case 3:
+            case "3":
                 jdbcExpenseDAO.updateExpenseName(expenseId, scanner);
                 break;
-            case 4:
+            case "4":
                 jdbcExpenseDAO.updateExpenseCost(expenseId, scanner);
                 break;
-            case 5:
+            case "5":
                 jdbcUserExpenseDAO.addDebtorName(expenseId, scanner);
                 break;
-            case 6:
+            case "6":
                 jdbcUserExpenseDAO.removeDebtorName(expenseId, scanner);
                 break;
-            case 7:
+            case "7":
                 jdbcExpenseDAO.updateCreditorName(expenseId, scanner);
                 break;
-            case 8:
+            case "8":
                 jdbcUserExpenseDAO.updatePaymentStatus(expenseId, scanner);
                 break;
-            case 9:
+            case "9":
                 jdbcExpenseDAO.deleteExpense(expenseId);
                 break;
             default:
-                System.out.println("Invalid update option");
+                System.out.println("Invalid update option. Please provide a number between 1 and 9");
         }
     }
 
-    public static void displayAllExpenseTransactions() {
+    public static void displayExpenseTransactions() {
         JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
-        jdbcExpenseDAO.displayAllExpenseTransactions();
+        jdbcExpenseDAO.displayExpenseTransactions();
+    }
+
+    public static void displayCombinedExpenseTransactions() {
+        JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
+        jdbcExpenseDAO.displayCombinedExpenseTransactions();
+    }
+
+    public static void displayFilteredCombinedExpenseTransactions(int expenseId) {
+        JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
+        jdbcExpenseDAO.displayFilteredCombinedExpenseTransactions(expenseId);
+    }
+
+    public static boolean expenseIdExists(int expenseId) {
+        JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
+        return jdbcExpenseDAO.expenseIdExists(expenseId);
     }
 
     public static void displayNetDebts() {

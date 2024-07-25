@@ -168,11 +168,13 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidEstablishmentName = false;
 
             while (!isValidEstablishmentName) {
-                System.out.print("Enter the new establishment name ");
+                System.out.print("Enter the new establishment name (leave blank to remain unchanged)");
                 establishmentName = scanner.nextLine();
 
-                if (InputValidator.isValidEstablishmentName(establishmentName)) {
-
+                // Leaving establishment name blank will return to previous options
+                if (establishmentName.trim().isBlank()) {
+                    return;
+                } else if (InputValidator.isValidEstablishmentName(establishmentName)) {
                     isValidEstablishmentName = true;
                 } else {
                     System.out.println("Invalid establishment name. Please enter a valid establishment name. ");
@@ -214,7 +216,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidExpenseCost = false;
 
             while (!isValidExpenseCost) {
-                System.out.print("Enter the new expense cost: ");
+                System.out.print("Enter the new expense cost: (leave blank to remain unchanged)");
                 String userInput = scanner.nextLine();
 
                 if (InputValidator.isValidCost(userInput)) {
@@ -323,8 +325,10 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         }
     }
 
-    public void displayAllExpenseTransactions() {
-        String query = "SELECT expense_date, establishment_name, expense_name, creditor_name, " + "debtor_name, amount_owed, payment_status FROM combined_user_expense ORDER BY " + "expense_date, establishment_name, expense_name, creditor_name, debtor_name";
+    public void displayExpenseTransactions() {
+        String query = "SELECT expense_id, expense_date, establishment_name, expense_name, total_cost, split_count, creditor_name " +
+                "FROM expense " +
+                "ORDER BY expense_date, establishment_name, expense_name, creditor_name";
         Connection conn = null;
         Statement stmt = null;
         ResultSet rs = null;
@@ -360,6 +364,122 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             ResourcesUtils.closeStatement(stmt);
             ResourcesUtils.closeConnection(conn);
         }
+    }
+
+    public void displayCombinedExpenseTransactions() {
+        String query = "SELECT expense_id, expense_date, establishment_name, expense_name, creditor_name, debtor_name, amount_owed, payment_status " +
+                "FROM combined_user_expense " +
+                "ORDER BY expense_date, establishment_name, expense_name, creditor_name, debtor_name";
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnectionManager.establishConnection();
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery(query);
+
+            // Get metadata to retrieve column names
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            // Print column headers
+            for (int i = 1; i <= columnCount; i++) {
+                // Adjust the column with
+                System.out.printf("%-20s", metaData.getColumnName(i));
+            }
+            System.out.println();
+
+            // Print the result set
+            while (rs.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    System.out.printf("%-20s", rs.getString(i));
+                }
+                System.out.println();
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closeStatement(stmt);
+            ResourcesUtils.closeConnection(conn);
+        }
+    }
+
+    public void displayFilteredCombinedExpenseTransactions(int expenseId) {
+        String query = "SELECT expense_id, expense_date, establishment_name, expense_name, creditor_name, debtor_name, amount_owed, payment_status " +
+                "FROM combined_user_expense " +
+                "WHERE expense_id = ? " +
+                "ORDER BY expense_date, establishment_name, expense_name, creditor_name, debtor_name";
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnectionManager.establishConnection();
+            pstmt = conn.prepareStatement(query);
+
+            // Set the parameter for the prepared statement
+            pstmt.setInt(1, expenseId);
+
+            rs = pstmt.executeQuery();
+
+            // Get metadata to retrieve column names
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            // Print column headers
+            for (int i = 1; i <= columnCount; i++) {
+                // Adjust the column with
+                System.out.printf("%-20s", metaData.getColumnName(i));
+            }
+            System.out.println();
+
+            // Print the result set
+            while (rs.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    System.out.printf("%-20s", rs.getString(i));
+                }
+                System.out.println();
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePreparedStatement(pstmt);
+            ResourcesUtils.closeConnection(conn);
+        }
+    }
+
+    public boolean expenseIdExists(int expenseId) {
+        String query = "SELECT expense_id FROM expense WHERE expense_id = ?";
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnectionManager.establishConnection();
+            pstmt = conn.prepareStatement(query);
+
+            // Set the parameter for the prepared statement
+            pstmt.setInt(1, expenseId);
+
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return true;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closeResultSet(rs);
+            ResourcesUtils.closePreparedStatement(pstmt);
+            ResourcesUtils.closeConnection(conn);
+        }
+        return false;
     }
 
     public int updateSplitCount(Connection conn, int expenseId, Boolean increment) throws SQLException {
@@ -414,20 +534,22 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             boolean isValidDate = false;
 
             while (!isValidDate) {
-                System.out.print("Enter the new date [dd/MM/yyyy] ");
+                System.out.print("Enter the new date [dd/MM/yyyy] (leave blank to remain unchanged)");
                 String dateString = scanner.nextLine();
 
 
-                if (InputValidator.isValidDate(dateString)) {
+                if (dateString.trim().isBlank()) {
+                    return;
+                } else if (InputValidator.isValidDate(dateString)) {
                     try {
                         date = new SimpleDateFormat("dd/MM/yyyy").parse(dateString);
                     } catch (ParseException e) {
                         e.printStackTrace();
                     }
                     isValidDate = true;
-                } else {
+                    } else {
                     System.out.println("Invalid date format. Please enter the date in dd/mm/yyyy format. ");
-                }
+                    }
             }
 
             // Convert java.util.Date to java.sql.Date
@@ -466,10 +588,12 @@ public class JdbcExpenseDAO implements ExpenseDAO {
 
 
             while (!isValidExpenseName) {
-                System.out.print("Enter the new expense name ");
+                System.out.print("Enter the new expense name (leave blank to remain unchanged)");
                 expenseName = scanner.nextLine();
 
-                if (InputValidator.isValidExpenseName(expenseName)) {
+                if (expenseName.trim().isBlank()) {
+                    return;
+                } else if (InputValidator.isValidExpenseName(expenseName)) {
                     isValidExpenseName = true;
                 } else {
                     System.out.println("Invalid expense name. Please enter a valid expense name. ");
