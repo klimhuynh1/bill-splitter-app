@@ -547,9 +547,9 @@ public class JdbcExpenseDAO implements ExpenseDAO {
                         e.printStackTrace();
                     }
                     isValidDate = true;
-                    } else {
+                } else {
                     System.out.println("Invalid date format. Please enter the date in dd/mm/yyyy format. ");
-                    }
+                }
             }
 
             // Convert java.util.Date to java.sql.Date
