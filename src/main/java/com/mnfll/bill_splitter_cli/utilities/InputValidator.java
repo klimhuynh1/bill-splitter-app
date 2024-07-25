@@ -1,4 +1,4 @@
-package com.mnfll.bill_splitter_app.utilities;
+package com.mnfll.bill_splitter_cli.utilities;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;

@@ -1,4 +1,4 @@
-package com.mnfll.bill_splitter_app;
+package com.mnfll.bill_splitter_cli;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

@@ -1,3 +1,3 @@
 Manifest-Version: 1.0
-Main-Class: com.mnfll.bill_splitter_app.App
+Main-Class: com.mnfll.bill_splitter_cli.App
 

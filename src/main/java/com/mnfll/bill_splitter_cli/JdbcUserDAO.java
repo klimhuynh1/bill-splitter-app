@@ -1,6 +1,5 @@
-package com.mnfll.bill_splitter_app;
+package com.mnfll.bill_splitter_cli;
 
-import javax.naming.spi.ResolveResult;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;

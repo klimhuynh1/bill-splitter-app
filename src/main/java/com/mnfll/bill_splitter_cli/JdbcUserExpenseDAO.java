@@ -1,6 +1,6 @@
-package com.mnfll.bill_splitter_app;
+package com.mnfll.bill_splitter_cli;
 
-import com.mnfll.bill_splitter_app.utilities.InputValidator;
+import com.mnfll.bill_splitter_cli.utilities.InputValidator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

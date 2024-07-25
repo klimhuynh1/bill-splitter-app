@@ -1,4 +1,4 @@
-package com.mnfll.bill_splitter_app;
+package com.mnfll.bill_splitter_cli;
 
 public class DebtRecord {
 	private String creditor;

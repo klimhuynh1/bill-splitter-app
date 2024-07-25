@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.mnfll</groupId>
-    <artifactId>bill-splitter-app</artifactId>
+    <artifactId>bill-splitter-cli</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
 
@@ -23,7 +23,7 @@
                     <configuration>
                         <archive>
                             <manifest>
-                                <mainClass>com.mnfll.bill_splitter_app.App</mainClass>
+                                <mainClass>com.mnfll.bill_splitter_cli.App</mainClass>
                             </manifest>
                         </archive>
                         <descriptorRefs>

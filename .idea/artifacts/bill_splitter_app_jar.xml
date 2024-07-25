@@ -2,7 +2,7 @@
   <artifact type="jar" name="bill-splitter-app:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/bill_splitter_app_jar</output-path>
     <root id="archive" name="bill-splitter-app.jar">
-      <element id="module-output" name="bill-splitter-app" />
+      <element id="module-output" name="bill-splitter-cli" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/protobuf/protobuf-java/3.21.9/protobuf-java-3.21.9.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/mysql/mysql-connector-j/8.1.0/mysql-connector-j-8.1.0.jar" path-in-jar="/" />
     </root>

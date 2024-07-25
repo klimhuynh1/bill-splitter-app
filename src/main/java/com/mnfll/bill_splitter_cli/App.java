@@ -1,6 +1,6 @@
-package com.mnfll.bill_splitter_app;
+package com.mnfll.bill_splitter_cli;
 
-import com.mnfll.bill_splitter_app.utilities.InputValidator;
+import com.mnfll.bill_splitter_cli.utilities.InputValidator;
 
 import java.sql.*;
 import java.text.ParseException;
@@ -21,7 +21,7 @@ public class App {
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
 
-        System.out.println("Welcome to the bill splitter app.");
+        System.out.println("Welcome to the Bill Splitter CLI.");
 
         while (running) {
             System.out.println();
