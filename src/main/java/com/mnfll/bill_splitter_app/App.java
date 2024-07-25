@@ -215,7 +215,7 @@ public class App {
         int expenseId = jdbcExpenseDAO.insertExpenseData(expense);
         jdbcUserExpenseDAO.insertUserExpenseData(expense, personIds, expenseId);
     }
-    
+
     public static void displayEditExpenseMenu(Scanner scanner) {
 
         System.out.println("Displaying all transactions...");
@@ -236,8 +236,7 @@ public class App {
                 expenseId = Integer.parseInt(expenseIdString);
                 if (expenseIdExists(expenseId)) {
                     break;
-                }
-                else {
+                } else {
                     System.out.println("Invalid input. Please enter a valid expense ID");
                 }
             } catch (NumberFormatException e) {
@@ -269,7 +268,6 @@ public class App {
         }
     }
 
-    //	TODO: Requires testing
     public static void updateExpense(int expenseId, Scanner scanner) throws ParseException {
         JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
         JdbcUserExpenseDAO jdbcUserExpenseDAO = new JdbcUserExpenseDAO();
@@ -285,8 +283,6 @@ public class App {
             }
 
             switch (updateOption) {
-                case 0:
-                    break;
                 case 1:
                     jdbcExpenseDAO.updateExpenseDate(expenseId, scanner);
                     break;
@@ -300,22 +296,28 @@ public class App {
                     jdbcExpenseDAO.updateExpenseCost(expenseId, scanner);
                     break;
                 case 5:
+                    // FIXME
                     jdbcUserExpenseDAO.addDebtorName(expenseId, scanner);
                     break;
                 case 6:
+                    // FIXME
                     jdbcUserExpenseDAO.removeDebtorName(expenseId, scanner);
                     break;
                 case 7:
+                    // FIXME
                     jdbcExpenseDAO.updateCreditorName(expenseId, scanner);
                     break;
                 case 8:
+                    // FIXME
                     jdbcUserExpenseDAO.updatePaymentStatus(expenseId, scanner);
                     break;
                 case 9:
                     jdbcExpenseDAO.deleteExpense(expenseId);
                     break; // breaks the switch case
+                case 0:
+                    break;
                 default:
-                    System.out.println("Invalid update option. Please provide a number between 0 and 9.");
+                    System.out.println("Invalid update option.");
                     continue;
             }
             break; // breaks the while loop
