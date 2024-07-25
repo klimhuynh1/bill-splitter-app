@@ -1,5 +1,6 @@
 package com.mnfll.bill_splitter_app;
 
+import javax.naming.spi.ResolveResult;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -108,49 +109,53 @@ public class JdbcUserDAO implements UserDAO {
 
     public void deleteOrphanUsers() {
         Connection connection = null;
-        PreparedStatement ps1 = null;
-        ResultSet rs1 = null;
-        PreparedStatement ps2 = null;
-        ResultSet rs2 = null;
-        PreparedStatement ps3 = null;
+        PreparedStatement selectStatement = null;
+        PreparedStatement checkStatement = null;
+        PreparedStatement deleteStatement = null;
+        ResultSet resultSet = null;
 
         try {
             connection = DatabaseConnectionManager.establishConnection();
-            // Delete from `user` table if they're not associated with any expense
-            String selectQuery = "SELECT user_id fROM user";
-            ps1 = connection.prepareStatement(selectQuery);
-            rs1 = ps1.executeQuery();
+
+            // Query to select all the user IDS in `user` table
+            String selectQuery = "SELECT user_id FROM user";
+            selectStatement = connection.prepareStatement(selectQuery);
+            resultSet = selectStatement.executeQuery();
+
+            // Query to count the number of times a user_id shows up in the `user_expense` table
+            String checkQuery = "SELECT COUNT(*) FROM user_expense WHERE debtor_id = ?";
+            checkStatement = connection.prepareStatement(checkQuery);
+
+            String deleteQuery = "DELETE FROM user WHERE user_id = ?";
+            deleteStatement = connection.prepareStatement(deleteQuery);
 
             // Iterate through the result set
-            while (rs1.next()) {
-                int userId = rs1.getInt("user_id");
+            while (resultSet.next()) {
+                int userId = resultSet.getInt(1);
 
-                // Check if the user_id exists in the user table
-                String checkQuery = "SELECT COUNT(*) FROM user WHERE user_id = ?";
-                ps2 = connection.prepareStatement(checkQuery);
-                ps2.setInt(1, userId);
-                rs2 = ps2.executeQuery();
+                // Check if the user_id exists in the `user_expense` table
+                checkStatement.setInt(1, userId);
+                ResultSet countResultSet = checkStatement.executeQuery();
 
-                int count = rs2.getInt(1);
+                if (countResultSet.next()) {
+                    int count = countResultSet.getInt(1);
 
-                if (count == 0) {
-                    // Delete the user from the user table
-                    String deleteQuery = "DELETE FROM user WHERE user_id = ?";
-                    ps3 = connection.prepareStatement(deleteQuery);
-                    ps3.setInt(1, userId);
-                    int rowsAffected = ps3.executeUpdate();
-
-                    System.out.println(rowsAffected + " rows(s) for user ID: " + userId);
+                    // Delete from `user` table if user is not associated with any expenses
+                    if (count == 0) {
+                        // Delete the user from the user table
+                        deleteStatement.setInt(1, userId);
+                        int rowsAffected = deleteStatement.executeUpdate();
+                        System.out.println(rowsAffected + " row(s) deleted for user ID: " + userId);
+                    }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            ResourcesUtils.closePreparedStatement(ps3);
-            ResourcesUtils.closeResultSet(rs2);
-            ResourcesUtils.closePreparedStatement(ps2);
-            ResourcesUtils.closeResultSet(rs1);
-            ResourcesUtils.closePreparedStatement(ps1);
+            ResourcesUtils.closePreparedStatement(deleteStatement);
+            ResourcesUtils.closePreparedStatement(checkStatement);
+            ResourcesUtils.closeResultSet(resultSet);
+            ResourcesUtils.closePreparedStatement(selectStatement);
             ResourcesUtils.closeConnection(connection);
         }
     }
