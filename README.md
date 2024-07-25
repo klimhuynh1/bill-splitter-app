@@ -1,1 +1,1 @@
-# bill-splitter-app
+# bill-splitter-cli
