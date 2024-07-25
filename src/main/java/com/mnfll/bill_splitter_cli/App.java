@@ -22,6 +22,9 @@ public class App {
         boolean running = true;
 
         System.out.println("Welcome to the Bill Splitter CLI.");
+        System.out.println();
+
+        createAllTables();
 
         while (running) {
             System.out.println();
@@ -43,18 +46,7 @@ public class App {
                 case "3" -> displayExpenseTransactions();
                 case "4" -> displayCombinedExpenseTransactions();
                 case "5" -> displayNetDebts();
-                case "6" -> {
-                    System.out.print("Are you sure you want to drop the table? This action cannot be undone. [y/N]: ");
-                    String confirmDrop = scanner.nextLine().trim().toLowerCase();
-                    if (!confirmDrop.isBlank() || confirmDrop.equals("n") || confirmDrop.equals("no")) {
-                        dropAllTables();
-                        dropAllViews();
-                        createAllTables();
-                    } else {
-                        System.out.println("Operation cancelled. The data was not cleared.");
-                        System.out.println();
-                    }
-                }
+                case "6" -> clearData(scanner);
                 case "7" -> running = false;
                 default -> System.out.println("Invalid input. Please try again.");
             }
@@ -431,6 +423,19 @@ public class App {
             ResourcesUtils.closeStatement(stmt);
             ResourcesUtils.closeResultSet(rs);
             ResourcesUtils.closeConnection(conn);
+        }
+    }
+
+    public static void clearData(Scanner scanner) {
+        System.out.print("Are you sure you want to drop the table? This action cannot be undone. [y/N]: ");
+        String confirmDrop = scanner.nextLine().trim().toLowerCase();
+        if (!confirmDrop.isBlank() || confirmDrop.equals("y") || confirmDrop.equals("yes")) {
+            dropAllTables();
+            dropAllViews();
+            createAllTables();
+        } else {
+            System.out.println("Operation cancelled. The data was not cleared.");
+            System.out.println();
         }
     }
 }
