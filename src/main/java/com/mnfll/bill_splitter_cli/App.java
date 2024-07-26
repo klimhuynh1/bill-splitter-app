@@ -52,14 +52,11 @@ public class App {
             }
         }
 
-        System.out.println("Thank you for using the bill splitter app.");
+        System.out.println("Thank you for using the Bill Splitter CLI.");
         scanner.close();
     }
 
     public static void addExpense(Scanner scanner) throws ParseException {
-        // Create a list to store expense
-        List<Expense> expenseList = new ArrayList<>();
-
         boolean addMoreExpense = true;
 
         while (addMoreExpense) {
@@ -78,10 +75,10 @@ public class App {
             boolean isValidName;
 
             while (!isValidDate) {
-                System.out.print("Enter the date [dd/mm/yyyy] ");
+                System.out.print("Please enter the date [dd/mm/yyyy]. Enter '0' to cancel. ");
                 dateString = scanner.nextLine().trim();
 
-                if (dateString.isBlank()) {
+                if (dateString.equals("0")) {
                     return;
                 }
 
@@ -94,8 +91,12 @@ public class App {
             }
 
             while (!isValidEstablishmentName) {
-                System.out.print("Enter the establishment name ");
+                System.out.print("Please enter the establishment name. Enter '0' to cancel. ");
                 establishmentName = scanner.nextLine().trim();
+
+                if (establishmentName.equals("0")) {
+                    return;
+                }
 
                 if (InputValidator.isValidEstablishmentName(establishmentName)) {
                     isValidEstablishmentName = true;
@@ -105,8 +106,12 @@ public class App {
             }
 
             while (!isValidExpenseName) {
-                System.out.print("Enter the item name ");
+                System.out.print("Please enter the item name. Enter '0' to cancel. ");
                 expenseName = scanner.nextLine().trim();
+
+                if (expenseName.equals("0")) {
+                    return;
+                }
 
                 if (InputValidator.isValidExpenseName(expenseName)) {
                     isValidExpenseName = true;
@@ -116,8 +121,12 @@ public class App {
             }
 
             while (!isValidExpenseCost) {
-                System.out.print("Enter the item total cost ");
+                System.out.print("Please enter the item total cost. Enter '0' to cancel. ");
                 String expenseCostString = scanner.nextLine().trim();
+
+                if (expenseCostString.equals("0")) {{
+                    return;
+                }}
 
                 if (InputValidator.isValidCost(expenseCostString)) {
                     expenseCostDouble = Double.parseDouble(expenseCostString);
@@ -128,8 +137,12 @@ public class App {
             }
 
             while (!isValidDebtorNumber) {
-                System.out.print("How many user are shared this item? ");
+                System.out.print("Please enter the number of debtors for this item. Enter '0' to cancel. ");
                 String numberOfDebtorsString = scanner.nextLine().trim();
+
+                if (numberOfDebtorsString.equals("0")) {
+                    return;
+                }
 
                 if (InputValidator.isValidInteger(numberOfDebtorsString)) {
                     numberOfDebtorsInteger = Integer.parseInt(numberOfDebtorsString);
@@ -143,8 +156,12 @@ public class App {
             for (int i = 0; i < numberOfDebtorsInteger; i++) {
                 isValidName = false;
                 while (!isValidName) {
-                    System.out.print("Enter name " + (i + 1) + " ");
+                    System.out.print("Please enter name " + (i + 1) + " ");
                     name = scanner.nextLine();
+
+                    if (name.equals("0")) {
+                        return;
+                    }
 
                     if (InputValidator.isValidName(name)) {
                         debtorNames.add(name);
@@ -156,27 +173,29 @@ public class App {
                 }
             }
 
-            System.out.println("Who paid for the item? ");
+            System.out.println("Please enter the creditor for this item. Enter '0' to cancel.");
             for (int i = 0; i < debtorNames.size(); i++) {
                 System.out.println((i + 1) + ". " + debtorNames.get(i));
             }
-            int creditorNameIndex = Integer.parseInt(scanner.nextLine());
+            String creditorNameString = scanner.nextLine();
+            if (creditorNameString.equals("0")) {
+                return;
+            }
+            int creditorNameIndex = Integer.parseInt(creditorNameString);
             String creditorName = debtorNames.get(creditorNameIndex - 1);
 
-            Expense expense = new Expense(date, establishmentName, expenseName, expenseCostDouble, debtorNames, creditorName);
-            expenseList.add(expense);
 
+            Expense expense = new Expense(date, establishmentName, expenseName, expenseCostDouble, debtorNames, creditorName);
+            // Display the expense details
+            expense.displayExpense();
+            // Save expense to the database
+            saveExpenseDataToDatabase(expense);
 
             System.out.print("Add more expense? [Y/n] ");
             String moreItems = scanner.nextLine().trim().toLowerCase();
             if (!(moreItems.isEmpty() || moreItems.equals("y") || moreItems.equals("yes"))) {
                 addMoreExpense = false;
             }
-        }
-
-        for (Expense expenseItem : expenseList) {
-            expenseItem.displayExpense();
-            saveExpenseDataToDatabase(expenseItem);
         }
     }
 
@@ -217,22 +236,25 @@ public class App {
         int expenseId;
 
         while (true) {
-            System.out.println("Enter the expense ID: ");
+            System.out.println("Please enter the expense ID. Enter '0' to cancel.");
             String expenseIdString = scanner.nextLine().trim();
 
             if (expenseIdString.isBlank()) {
                 System.out.println("Expense ID cannot be empty. Please try again.");
-                continue;
+            } else if (expenseIdString.equals("0")) {
+                return;
             }
-            try {
-                expenseId = Integer.parseInt(expenseIdString);
-                if (expenseIdExists(expenseId)) {
-                    break;
-                } else {
-                    System.out.println("Invalid input. Please enter a valid expense ID");
+            else {
+                try {
+                    expenseId = Integer.parseInt(expenseIdString);
+                    if (expenseIdExists(expenseId)) {
+                        break;
+                    } else {
+                        System.out.println("Invalid input. Please enter a valid expense ID");
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input. Please enter a valid number");
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a valid number");
             }
         }
 
