@@ -1,11 +1,8 @@
 package com.mnfll.bill_splitter_cli;
 
-import com.mnfll.bill_splitter_cli.utilities.InputValidator;
-
+import com.mnfll.bill_splitter_cli.utilities.InputHandler;
 import java.sql.*;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
@@ -60,142 +57,32 @@ public class App {
         boolean addMoreExpense = true;
 
         while (addMoreExpense) {
-            String dateString;
-            Date date = null;
-            String establishmentName = null;
-            String expenseName = null;
-            double expenseCostDouble = 0;
-            int numberOfDebtorsInteger = 0;
-            List<String> debtorNames = new ArrayList<>();
-            boolean isValidDate = false;
-            boolean isValidEstablishmentName = false;
-            boolean isValidExpenseName = false;
-            boolean isValidExpenseCost = false;
-            boolean isValidDebtorNumber = false;
-            boolean isValidName;
+            Date date = InputHandler.promptForDate(scanner);
+            if (date == null) return;
 
-            while (!isValidDate) {
-                System.out.print("Please enter the date [dd/mm/yyyy]. Enter '0' to cancel. ");
-                dateString = scanner.nextLine().trim();
+            String establishmentName = InputHandler.promptForEstablishmentName(scanner);
+            if (establishmentName == null) return;
 
-                if (dateString.equals("0")) {
-                    return;
-                }
+            String expenseName = InputHandler.promptForExpenseName(scanner);
+            if (expenseName == null) return;
 
-                if (InputValidator.isValidDate(dateString)) {
-                    date = new SimpleDateFormat("dd/MM/yyyy").parse(dateString);
-                    isValidDate = true;
-                } else {
-                    System.out.print("Invalid date format. Please enter the date in dd/mm/yyyy format. ");
-                }
-            }
+            double expenseCostDouble = InputHandler.promptForDouble(scanner);
+            if (Double.isNaN(expenseCostDouble)) return;
 
-            while (!isValidEstablishmentName) {
-                System.out.print("Please enter the establishment name. Enter '0' to cancel. ");
-                establishmentName = scanner.nextLine().trim();
+            int numberOfDebtorsInteger = InputHandler.promptForInteger(scanner);
+            if (numberOfDebtorsInteger == 0) return;
 
-                if (establishmentName.equals("0")) {
-                    return;
-                }
+            List<String> debtorNames = InputHandler.promptForNames(scanner, numberOfDebtorsInteger);
+            if (debtorNames == null) return;
 
-                if (InputValidator.isValidEstablishmentName(establishmentName)) {
-                    isValidEstablishmentName = true;
-                } else {
-                    System.out.print("Invalid establishment name. Please enter a valid establishment name. ");
-                }
-            }
-
-            while (!isValidExpenseName) {
-                System.out.print("Please enter the item name. Enter '0' to cancel. ");
-                expenseName = scanner.nextLine().trim();
-
-                if (expenseName.equals("0")) {
-                    return;
-                }
-
-                if (InputValidator.isValidExpenseName(expenseName)) {
-                    isValidExpenseName = true;
-                } else {
-                    System.out.print("Invalid expense name. Please enter a valid expense name. ");
-                }
-            }
-
-            while (!isValidExpenseCost) {
-                System.out.print("Please enter the item total cost. Enter '0' to cancel. ");
-                String expenseCostString = scanner.nextLine().trim();
-
-                if (expenseCostString.equals("0")) {{
-                    return;
-                }}
-
-                if (InputValidator.isValidCost(expenseCostString)) {
-                    expenseCostDouble = Double.parseDouble(expenseCostString);
-                    isValidExpenseCost = true;
-                } else {
-                    System.out.println("Invalid expense cost. Please enter a valid expense cost. ");
-                }
-            }
-
-            while (!isValidDebtorNumber) {
-                System.out.print("Please enter the number of debtors for this item. Enter '0' to cancel. ");
-                String numberOfDebtorsString = scanner.nextLine().trim();
-
-                if (numberOfDebtorsString.equals("0")) {
-                    return;
-                }
-
-                if (InputValidator.isValidInteger(numberOfDebtorsString)) {
-                    numberOfDebtorsInteger = Integer.parseInt(numberOfDebtorsString);
-                    isValidDebtorNumber = true;
-                } else {
-                    System.out.println("Invalid number of user. Please enter a valid number of user.");
-                }
-            }
-
-            String name;
-            for (int i = 0; i < numberOfDebtorsInteger; i++) {
-                isValidName = false;
-                while (!isValidName) {
-                    System.out.print("Please enter name " + (i + 1) + " ");
-                    name = scanner.nextLine();
-
-                    if (name.equals("0")) {
-                        return;
-                    }
-
-                    if (InputValidator.isValidName(name)) {
-                        debtorNames.add(name);
-                        System.out.println(name + " has been added");
-                        isValidName = true;
-                    } else {
-                        System.out.println("Invalid name. Please enter a valid name.");
-                    }
-                }
-            }
-
-            System.out.println("Please enter the creditor for this item. Enter '0' to cancel.");
-            for (int i = 0; i < debtorNames.size(); i++) {
-                System.out.println((i + 1) + ". " + debtorNames.get(i));
-            }
-            String creditorNameString = scanner.nextLine();
-            if (creditorNameString.equals("0")) {
-                return;
-            }
-            int creditorNameIndex = Integer.parseInt(creditorNameString);
-            String creditorName = debtorNames.get(creditorNameIndex - 1);
-
+            String creditorName = InputHandler.promptForCreditor(scanner, debtorNames);
+            if (creditorName == null) return;
 
             Expense expense = new Expense(date, establishmentName, expenseName, expenseCostDouble, debtorNames, creditorName);
-            // Display the expense details
             expense.displayExpense();
-            // Save expense to the database
             saveExpenseDataToDatabase(expense);
 
-            System.out.print("Add more expense? [Y/n] ");
-            String moreItems = scanner.nextLine().trim().toLowerCase();
-            if (!(moreItems.isEmpty() || moreItems.equals("y") || moreItems.equals("yes"))) {
-                addMoreExpense = false;
-            }
+            addMoreExpense = InputHandler.promptForMoreItems(scanner);
         }
     }
 
