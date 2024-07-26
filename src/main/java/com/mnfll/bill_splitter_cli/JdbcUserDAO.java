@@ -159,39 +159,50 @@ public class JdbcUserDAO implements UserDAO {
         }
     }
 
-    public int addNewUserIfNotExist(Connection conn, String debtorName) throws SQLException {
-        PreparedStatement ps1 = null;
-        PreparedStatement ps2 = null;
+    public int getUserId(Connection conn, String debtorName) {
+        PreparedStatement ps = null;
         ResultSet rs = null;
 
         try {
             String selectQuery = "SELECT user_id FROM user WHERE user_name = ?";
-            ps1 = conn.prepareStatement(selectQuery);
-            ps1.setString(1, debtorName);
-            rs = ps1.executeQuery();
+            ps = conn.prepareStatement(selectQuery);
+            ps.setString(1, debtorName);
+            rs = ps.executeQuery();
 
             if (rs.next()) {
-                // User already exists, retrieve the user id
-                return rs.getInt("user_id");
-            } else {
-                // User does not exist, create a new record
-                String insertQuery = "INSERT INTO user (user_name) VALUES (?)";
-                ps2 = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
-                ps2.setString(1, debtorName);
-                ps2.executeUpdate();
-
-                // Retrieve the generated user_id
-                ResultSet generatedKeys = ps2.getGeneratedKeys();
-                if (generatedKeys.next()) {
-                    return generatedKeys.getInt(1);
-                }
+                // User exists, return the user id
+                return rs.getInt(1);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
             ResourcesUtils.closeResultSet(rs);
-            ResourcesUtils.closePreparedStatement(ps2);
-            ResourcesUtils.closePreparedStatement(ps1);
+            ResourcesUtils.closePreparedStatement(ps);
+        }
+
+        return -1;
+    }
+
+    public int addNewUser(Connection conn, String debtorName) {
+        PreparedStatement ps = null;
+
+        try {
+            String insertQuery = "INSERT INTO user (user_name) VALUES (?)";
+            ps = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, debtorName);
+            ps.executeUpdate();
+
+            // Retrieve the generated user_id
+            ResultSet generatedKeys = ps.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                return generatedKeys.getInt(1);
+            } else {
+                throw new SQLException("Creating user failed, no user ID obtained.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            ResourcesUtils.closePreparedStatement(ps);
         }
 
         return -1;
