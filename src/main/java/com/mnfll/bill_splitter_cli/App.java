@@ -288,7 +288,6 @@ public class App {
                     jdbcExpenseDAO.updateExpenseCost(expenseId, scanner);
                     break;
                 case 5:
-                    // FIXME
                     jdbcUserExpenseDAO.addDebtorName(expenseId, scanner);
                     break;
                 case 6:

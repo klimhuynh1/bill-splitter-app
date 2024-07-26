@@ -123,21 +123,30 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
 
         try {
             conn = DatabaseConnectionManager.establishConnection();
+            System.out.print("Please provide the debtor's name ");
             String newDebtorName = scanner.nextLine();
 
             if (InputValidator.isValidName(newDebtorName)) {
                 JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
                 JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
 
-                int personId = jdbcUserDAO.addNewUserIfNotExist(conn, newDebtorName);
+                int userId;
+
+                if (jdbcUserDAO.getUserId(conn, newDebtorName) == -1) {
+                    userId = jdbcUserDAO.addNewUser(conn, newDebtorName);
+                } else {
+                    userId = jdbcUserDAO.getUserId(conn, newDebtorName);
+                }
+
+                int creditorId = jdbcExpenseDAO.getCreditorId(expenseId);
                 int splitCount = jdbcExpenseDAO.updateSplitCount(conn, expenseId, true);
 
-                if (isPersonAndSplitCountValid(personId, splitCount)) {
+                if (isPersonAndSplitCountValid(userId, splitCount)) {
                     double newAmountOwed = jdbcExpenseDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
 
                     if (newAmountOwed != -1) {
                         updateAmountOwed(conn, expenseId, newAmountOwed);
-                        addExpensePersonRecord(conn, expenseId, personId, newAmountOwed);
+                        addUserExpenseRecord(conn, expenseId, creditorId, userId, newAmountOwed);
                     }
                 }
             }
@@ -165,7 +174,7 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
 
             if (InputValidator.isValidName(debtorName)) {
                 int personId = jdbcUserDAO.getUserIdByName(debtorName);
-                int creditorId = jdbcExpensesDAO.getCreditorIdByExpenseId(expenseId);
+                int creditorId = jdbcExpensesDAO.getCreditorId(expenseId);
 
                 // FIXME: temporary fix, will implement either singleton pattern and/or command pattern
                 if (personId == creditorId) {
@@ -197,18 +206,19 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         }
     }
 
-    public void addExpensePersonRecord(Connection conn, int expenseId, int personId, double newAmountOwed) throws SQLException {
+    public void addUserExpenseRecord(Connection conn, int expenseId, int creditorId, int debtorId, double newAmountOwed) throws SQLException {
         PreparedStatement ps = null;
 
         try {
-            String insertQuery = "INSERT INTO user_expense (expense_id, person_id, amount_owed) VALUES (?, ?, ?)";
+            String insertQuery = "INSERT INTO user_expense (expense_id, creditor_id, debtor_id, amount_owed) VALUES (?, ?, ?, ?)";
             ps = conn.prepareStatement(insertQuery);
             ps.setInt(1, expenseId);
-            ps.setInt(2, personId);
-            ps.setDouble(3, newAmountOwed);
+            ps.setInt(2, creditorId);
+            ps.setInt(3, debtorId);
+            ps.setDouble(4, newAmountOwed);
 
             int rowsAffected = ps.executeUpdate();
-            System.out.println("Add row for new debtor name -- Rows affected: " + rowsAffected);
+            System.out.println(rowsAffected + " row(s) updated successfully in the `user_expense` table");
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -226,7 +236,8 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
             ps.setInt(2, expenseId);
 
             int rowsAffected = ps.executeUpdate();
-            System.out.println("Update amount owed -- Rows affected: " + rowsAffected);
+            System.out.println("Update amount_owed for each person to " + newAmountOwed);
+            System.out.println(rowsAffected + " row(s) updated successfully in the `user_expense` table");
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
