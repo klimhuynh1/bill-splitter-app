@@ -60,7 +60,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         return generatedExpenseId;
     }
 
-    public int getCreditorIdByExpenseId(int expenseId) {
+    public int getCreditorId(int expenseId) {
         PreparedStatement ps = null;
         ResultSet rs = null;
         Connection conn = null;
@@ -75,9 +75,9 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             rs = ps.executeQuery();
             if (rs.next()) {
                 creditorId = rs.getInt("creditor_id");
-                System.out.println("creditor ID: " + creditorId);
+                System.out.println("Creditor ID found: " + creditorId);
             } else {
-                System.out.println("creditor Id not found");
+                System.out.println("Creditor Id not found");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -131,7 +131,6 @@ public class JdbcExpenseDAO implements ExpenseDAO {
             ResourcesUtils.closeConnection(conn);
         }
     }
-
 
     //    TODO: Requires testing
     public double calculateNewAmountOwed(Connection connection, int expenseId, int splitCount) throws SQLException {
@@ -507,7 +506,8 @@ public class JdbcExpenseDAO implements ExpenseDAO {
                 ps2.setInt(2, expenseId);
 
                 int rowsUpdateExpense = ps2.executeUpdate();
-                System.out.println("Update split_count -- Rows affected: " + rowsUpdateExpense);
+                System.out.println("Update split_count to " + splitCount);
+                System.out.println(rowsUpdateExpense + " row(s) updated successfully in the `expense` table.");
 
                 return splitCount;
             }
