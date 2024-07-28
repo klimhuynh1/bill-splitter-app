@@ -11,6 +11,8 @@ import java.util.Scanner;
  * Coordinate and utilise the other managers. This class remains the entry point for interacting with the data layer but
  * delegates tasks to the specialised class.
  */
+
+// TODO: Add Log4j logging
 public class JdbcExpenseDAO implements ExpenseDAO {
     // Add data into Expense table
     public int insertExpenseData(Expense expense) {
@@ -54,7 +56,7 @@ public class JdbcExpenseDAO implements ExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
 
         return generatedExpenseId;
@@ -145,7 +147,8 @@ public class JdbcExpenseDAO implements ExpenseDAO {
 
             if (rs.next()) {
                 double expenseCost = rs.getDouble("total_cost");
-                return expenseCost / splitCount;
+                double newAmountOwed = expenseCost / splitCount;
+                return Math.round(newAmountOwed * 100.0) / 100.0; // Return the new amount owed rounded to 2 decimal places.6
             }
         } catch (SQLException e) {
             e.printStackTrace();
