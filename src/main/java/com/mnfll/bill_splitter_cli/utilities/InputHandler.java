@@ -83,7 +83,7 @@ public class InputHandler {
         List<String> names = new ArrayList<>();
         for (int i = 0; i < numberOfDebtors; i++) {
             while (true) {
-                System.out.print("Enter name " + (i + 1) + ": ");
+                System.out.print("Please enter name " + (i + 1) + ": ");
                 String name = scanner.nextLine();
                 if (name.equals("0")) return null;
 

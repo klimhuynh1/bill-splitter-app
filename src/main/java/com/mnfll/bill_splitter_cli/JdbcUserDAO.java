@@ -89,23 +89,26 @@ public class JdbcUserDAO implements UserDAO {
 
     public int getUserIdByName(String userName) {
         Connection connection = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
         int userId = -1;
+
         try {
             connection = DatabaseConnectionManager.establishConnection();
             // Retrieve user_id given user_name
             String selectQuery = "SELECT user_id FROM user WHERE user_name = ? LIMIT 1";
-            PreparedStatement statement = connection.prepareStatement(selectQuery);
-            statement.setString(1, userName);
-            ResultSet resultSet = statement.executeQuery();
-            if (resultSet.next()) {
-                userId = resultSet.getInt("user_id");
+            ps = connection.prepareStatement(selectQuery);
+            ps.setString(1, userName);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                userId = rs.getInt("user_id");
             } else {
                 System.out.println("User Id not found");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
         return userId;
     }

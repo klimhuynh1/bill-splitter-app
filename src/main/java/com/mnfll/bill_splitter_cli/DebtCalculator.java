@@ -39,7 +39,7 @@ public class DebtCalculator {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
 
         return debtRecords;

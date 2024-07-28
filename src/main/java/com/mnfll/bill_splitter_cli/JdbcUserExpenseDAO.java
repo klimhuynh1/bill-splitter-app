@@ -6,10 +6,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class JdbcUserExpenseDAO implements UserExpenseDAO {
+    private static final Logger logger = LogManager.getLogger(JdbcUserExpenseDAO.class);
+
     public void insertUserExpenseData(Expense expense, List<Integer> personIds, int expenseId) {
         Connection connection = null;
 
@@ -50,7 +57,7 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            DatabaseConnectionManager.closeConnection(connection);
+            ResourcesUtils.closeConnection(connection);
         }
     }
 
@@ -118,40 +125,51 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         }
     }
 
+    // TODO: Allow adding multiple debtors simultaneously
     public void addDebtorName(int expenseId, Scanner scanner) {
         Connection conn = null;
 
         try {
             conn = DatabaseConnectionManager.establishConnection();
-            System.out.print("Please provide the debtor's name ");
-            String newDebtorName = scanner.nextLine();
 
-            if (InputValidator.isValidName(newDebtorName)) {
-                JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
-                JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
+            while (true) {
+                System.out.print("Please provide the debtor's name. Enter '0' to cancel. ");
+                String newDebtorName = scanner.nextLine().trim();
 
-                int userId;
+                if (newDebtorName.equals("0")) {
+                    return;
+                } else if (InputValidator.isValidName(newDebtorName)) {
+                    // TODO: Handle duplicate names
+                    JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
+                    JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
 
-                if (jdbcUserDAO.getUserId(conn, newDebtorName) == -1) {
-                    userId = jdbcUserDAO.addNewUser(conn, newDebtorName);
-                } else {
-                    userId = jdbcUserDAO.getUserId(conn, newDebtorName);
-                }
+                    int userId;
 
-                int creditorId = jdbcExpenseDAO.getCreditorId(expenseId);
-                int splitCount = jdbcExpenseDAO.updateSplitCount(conn, expenseId, true);
-
-                if (isPersonAndSplitCountValid(userId, splitCount)) {
-                    double newAmountOwed = jdbcExpenseDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
-
-                    if (newAmountOwed != -1) {
-                        updateAmountOwed(conn, expenseId, newAmountOwed);
-                        addUserExpenseRecord(conn, expenseId, creditorId, userId, newAmountOwed);
+                    if (jdbcUserDAO.getUserId(conn, newDebtorName) == -1) {
+                        userId = jdbcUserDAO.addNewUser(conn, newDebtorName);
+                    } else {
+                        userId = jdbcUserDAO.getUserId(conn, newDebtorName);
                     }
+
+                    int creditorId = jdbcExpenseDAO.getCreditorId(expenseId);
+                    int splitCount = jdbcExpenseDAO.updateSplitCount(conn, expenseId, true);
+
+                    if (isPersonAndSplitCountValid(userId, splitCount)) {
+                        double newAmountOwed = jdbcExpenseDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
+
+                        if (newAmountOwed != -1) {
+                            updateAmountOwed(conn, expenseId, newAmountOwed);
+                            addUserExpenseRecord(conn, expenseId, creditorId, userId, newAmountOwed);
+                            System.out.println("Debtor removed successfully.");
+                            break;
+                        }
+                    }
+                } else {
+                    System.out.println("Invalid name. Please try again.");
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("An error occurred while adding the debtor.", e);
         } finally {
             ResourcesUtils.closeConnection(conn);
         }
@@ -161,52 +179,93 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
         return (personId != -1 && splitCount != -1);
     }
 
-    public void removeDebtorName(int expenseId, Scanner scanner) {
+    public HashMap<Integer, String> getDebtors(Connection conn, int expenseId) {
+        HashMap<Integer, String> debtors = new HashMap<Integer, String>();
         PreparedStatement ps = null;
-        Connection conn = null;
+        ResultSet rs = null;
+        int creditorId;
+        int debtorId;
+        String debtorName;
 
         try {
-            conn = DatabaseConnectionManager.establishConnection();
-            System.out.print("Enter the debtor name you would like to remove ");
-            String debtorName = scanner.nextLine();
-            JdbcUserDAO jdbcUserDAO = new JdbcUserDAO();
-            JdbcExpenseDAO jdbcExpensesDAO = new JdbcExpenseDAO();
+            String selectQuery = "SELECT creditor_id, debtor_id, debtor_name FROM combined_user_expense WHERE expense_id = ?";
+            ps = conn.prepareStatement(selectQuery);
+            ps.setInt(1, expenseId);
+            rs = ps.executeQuery();
 
-            if (InputValidator.isValidName(debtorName)) {
-                int personId = jdbcUserDAO.getUserIdByName(debtorName);
-                int creditorId = jdbcExpensesDAO.getCreditorId(expenseId);
+            while (rs.next()) {
+                creditorId = rs.getInt(1);
+                debtorId = rs.getInt(2);
+                debtorName = rs.getString(3);
 
-                // FIXME: temporary fix, will implement either singleton pattern and/or command pattern
-                if (personId == creditorId) {
-                    throw new IllegalArgumentException("You cannot remove debtor name as they are the creditor");
-                } else {
-                    // Otherwise, remove record in `user_expense` table based on person_id and expense_id
-                    String query = "DELETE FROM user_expense WHERE expense_id = ? AND person_id = ?";
-                    ps = conn.prepareStatement(query);
-                    ps.setInt(1, expenseId);
-                    ps.setInt(2, personId);
-                    ps.executeUpdate();
-
-                    // Update split_count in `expenses` table based on expense_id
-                    int splitCount = jdbcExpensesDAO.updateSplitCount(conn, expenseId, false);
-                    // Re-calculate cost per debtor
-                    double newAmountOwed = jdbcExpensesDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
-
-                    if (newAmountOwed != -1) {
-                        // Update amount_owed based on expense_id
-                        updateAmountOwed(conn, expenseId, newAmountOwed);
-                    }
+                // Creditor cannot be removed
+                if (creditorId != debtorId) {
+                    debtors.put(debtorId, debtorName);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
+            ResourcesUtils.closeResultSet(rs);
             ResourcesUtils.closePreparedStatement(ps);
+        }
+
+        return debtors;
+    }
+
+    // TODO: Allow removing multiple debtors simultaneously
+    public void removeDebtorName(int expenseId, Scanner scanner) {
+        Connection conn = null;
+
+        try {
+            conn = DatabaseConnectionManager.establishConnection();
+            // Display the debtor IDs and debtor names associated with this expense ID
+            HashMap<Integer, String> debtors = getDebtors(conn, expenseId);
+            for (Map.Entry<Integer, String> entry : debtors.entrySet()) {
+                Integer key = entry.getKey();
+                String value = entry.getValue();
+                System.out.println("user_id: " + key + " // user_name: " + value);
+            }
+            while (true) {
+                System.out.print("Please enter the user id you would like to remove. Enter '0' to cancel. ");
+                String debtorIdString = scanner.nextLine().trim();
+
+                if (debtorIdString.equals("0")) {
+                    return;
+                }
+                try {
+                    // Check if the selection is a key within the hashmap
+                    int debtorIdInt = Integer.parseInt(debtorIdString);
+                    if (debtors.containsKey(debtorIdInt)) {
+                        JdbcExpenseDAO jdbcExpenseDAO = new JdbcExpenseDAO();
+                        // Decrement the split_count in `expenses` table based on expense_id
+                        int splitCount = jdbcExpenseDAO.updateSplitCount(conn, expenseId, false);
+                        // Calculate the new cost per debtor
+                        double newAmountOwed = jdbcExpenseDAO.calculateNewAmountOwed(conn, expenseId, splitCount);
+                        // Remove record in user_expense table where expense_id=? to new amount owed
+                        removeUserExpenseRecord(conn, expenseId, debtorIdInt);
+                        if (newAmountOwed != -1) {
+                            // Update amount_owed based on expense_id
+                            updateAmountOwed(conn, expenseId, newAmountOwed);
+                            System.out.println("Debtor removed successfully.");
+                            break;
+                        }
+                    } else {
+                        System.out.println("Invalid user ID. Please try again.");
+                    }
+                } catch (NumberFormatException e) {
+                    logger.error("Invalid input: not a valid user ID.", e);
+                    System.out.println("Invalid input. Please enter a valid user ID");
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("An error occurred while removing the debtor.", e);
+        } finally {
             ResourcesUtils.closeConnection(conn);
         }
     }
 
-    public void addUserExpenseRecord(Connection conn, int expenseId, int creditorId, int debtorId, double newAmountOwed) throws SQLException {
+    public void addUserExpenseRecord(Connection conn, int expenseId, int creditorId, int debtorId, double newAmountOwed) {
         PreparedStatement ps = null;
 
         try {
@@ -218,12 +277,29 @@ public class JdbcUserExpenseDAO implements UserExpenseDAO {
             ps.setDouble(4, newAmountOwed);
 
             int rowsAffected = ps.executeUpdate();
-            System.out.println(rowsAffected + " row(s) updated successfully in the `user_expense` table");
+            System.out.println(rowsAffected + " added successfully to the user_expense table.");
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
             ResourcesUtils.closePreparedStatement(ps);
         }
+    }
+
+    public void removeUserExpenseRecord(Connection conn, int expenseId, int debtorId) {
+        PreparedStatement ps = null;
+
+        try {
+            String deleteQuery = "DELETE FROM user_expense WHERE expense_id = ? AND debtor_id = ?";
+            ps = conn.prepareStatement(deleteQuery);
+            ps.setInt(1, expenseId);
+            ps.setInt(2, debtorId);
+
+            int rowsAffected = ps.executeUpdate();
+            System.out.println(rowsAffected + " removed successfully to the `user_expense table");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        ResourcesUtils.closePreparedStatement(ps);
     }
 
     public void updateAmountOwed(Connection conn, int expenseId, double newAmountOwed) throws SQLException {
